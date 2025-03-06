@@ -1,0 +1,871 @@
+{
+  "products": [
+    {
+      "id": "PRD-001",
+      "name": "Professional Accounting Suite",
+      "description": "Complete accounting solution for small to medium businesses",
+      "category": "Financial Software",
+      "subCategory": "Accounting",
+      "price": 899.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 150,
+        "lowStockThreshold": 20
+      },
+      "specifications": {
+        "version": "2023.1",
+        "releaseDate": "2023-01-15",
+        "platforms": ["Windows", "macOS", "Cloud"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 12",
+          "recommendedRAM": "8GB",
+          "diskSpace": "2GB"
+        }
+      },
+      "features": [
+        "Multi-currency support",
+        "VAT calculations",
+        "Financial reporting",
+        "Invoice management",
+        "Payroll processing",
+        "Bank reconciliation"
+      ],
+      "compatibleProducts": ["PRD-005", "PRD-008", "PRD-012"],
+      "media": {
+        "thumbnailUrl": "accounting_suite_thumb.jpg",
+        "images": [
+          "accounting_suite_1.jpg",
+          "accounting_suite_2.jpg"
+        ],
+        "demoVideoUrl": "accounting_suite_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-11-10T14:30:00Z",
+        "lastUpdated": "2023-03-25T09:15:30Z"
+      },
+      "status": "Active",
+      "popularity": 4.7
+    },
+    {
+      "id": "PRD-002",
+      "name": "Payroll Manager Pro",
+      "description": "Comprehensive payroll management solution with automatic tax calculations",
+      "category": "Financial Software",
+      "subCategory": "Payroll",
+      "price": 499.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 200,
+        "lowStockThreshold": 30
+      },
+      "specifications": {
+        "version": "4.2.1",
+        "releaseDate": "2023-02-10",
+        "platforms": ["Windows", "macOS", "Cloud"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 11",
+          "recommendedRAM": "6GB",
+          "diskSpace": "1.5GB"
+        }
+      },
+      "features": [
+        "Automatic tax calculations",
+        "Employee self-service portal",
+        "Direct deposit management",
+        "Year-end reporting",
+        "Compliance updates",
+        "Multi-company support"
+      ],
+      "compatibleProducts": ["PRD-001", "PRD-012"],
+      "media": {
+        "thumbnailUrl": "payroll_manager_thumb.jpg",
+        "images": [
+          "payroll_manager_1.jpg",
+          "payroll_manager_2.jpg"
+        ],
+        "demoVideoUrl": "payroll_manager_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-10-05T11:45:00Z",
+        "lastUpdated": "2023-03-20T14:30:15Z"
+      },
+      "status": "Active",
+      "popularity": 4.5
+    },
+    {
+      "id": "PRD-003",
+      "name": "Inventory Control System",
+      "description": "Full-featured inventory management and control system",
+      "category": "Business Management",
+      "subCategory": "Inventory",
+      "price": 699.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 120,
+        "lowStockThreshold": 15
+      },
+      "specifications": {
+        "version": "3.5.0",
+        "releaseDate": "2023-01-20",
+        "platforms": ["Windows", "Cloud"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "German"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10",
+          "recommendedRAM": "8GB",
+          "diskSpace": "3GB"
+        }
+      },
+      "features": [
+        "Barcode scanning",
+        "Stock level alerts",
+        "Purchase order management",
+        "Multi-location support",
+        "Batch tracking",
+        "Demand forecasting"
+      ],
+      "compatibleProducts": ["PRD-004", "PRD-007", "PRD-001"],
+      "media": {
+        "thumbnailUrl": "inventory_system_thumb.jpg",
+        "images": [
+          "inventory_system_1.jpg",
+          "inventory_system_2.jpg",
+          "inventory_system_3.jpg"
+        ],
+        "demoVideoUrl": "inventory_system_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-09-15T08:30:00Z",
+        "lastUpdated": "2023-02-28T10:45:20Z"
+      },
+      "status": "Active",
+      "popularity": 4.3
+    },
+    {
+      "id": "PRD-004",
+      "name": "Point of Sale Terminal",
+      "description": "Modern POS system with hardware and software components",
+      "category": "Business Management",
+      "subCategory": "Point of Sale",
+      "price": 1299.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 85,
+        "lowStockThreshold": 20
+      },
+      "specifications": {
+        "version": "2.8.3",
+        "releaseDate": "2023-02-05",
+        "platforms": ["Windows", "Android", "iOS"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / Android 10 / iOS 14",
+          "recommendedRAM": "4GB",
+          "diskSpace": "2GB"
+        },
+        "includesHardware": true,
+        "hardwareComponents": [
+          "Cash drawer",
+          "Receipt printer",
+          "Barcode scanner",
+          "Customer display"
+        ]
+      },
+      "features": [
+        "Integrated payments",
+        "Customer loyalty program",
+        "Inventory sync",
+        "Employee management",
+        "Reporting and analytics",
+        "Offline operation mode"
+      ],
+      "compatibleProducts": ["PRD-003", "PRD-007", "PRD-001"],
+      "media": {
+        "thumbnailUrl": "pos_terminal_thumb.jpg",
+        "images": [
+          "pos_terminal_1.jpg",
+          "pos_terminal_2.jpg",
+          "pos_terminal_3.jpg"
+        ],
+        "demoVideoUrl": "pos_terminal_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-08-20T13:15:00Z",
+        "lastUpdated": "2023-03-10T16:40:45Z"
+      },
+      "status": "Active",
+      "popularity": 4.8
+    },
+    {
+      "id": "PRD-005",
+      "name": "Financial Planning Tool",
+      "description": "Strategic financial planning and forecasting application",
+      "category": "Financial Software",
+      "subCategory": "Planning",
+      "price": 799.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 110,
+        "lowStockThreshold": 15
+      },
+      "specifications": {
+        "version": "2.1.0",
+        "releaseDate": "2023-01-30",
+        "platforms": ["Windows", "macOS", "Cloud"],
+        "languages": ["English", "Norwegian", "Swedish"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 12",
+          "recommendedRAM": "8GB",
+          "diskSpace": "1GB"
+        }
+      },
+      "features": [
+        "Cash flow forecasting",
+        "Budget planning",
+        "What-if scenario analysis",
+        "Financial KPI dashboard",
+        "Custom reporting",
+        "Data visualization"
+      ],
+      "compatibleProducts": ["PRD-001", "PRD-008"],
+      "media": {
+        "thumbnailUrl": "financial_planning_thumb.jpg",
+        "images": [
+          "financial_planning_1.jpg",
+          "financial_planning_2.jpg"
+        ],
+        "demoVideoUrl": "financial_planning_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-11-05T09:20:00Z",
+        "lastUpdated": "2023-03-15T11:30:25Z"
+      },
+      "status": "Active",
+      "popularity": 4.2
+    },
+    {
+      "id": "PRD-006",
+      "name": "Project Management Suite",
+      "description": "End-to-end project planning and management solution",
+      "category": "Business Management",
+      "subCategory": "Project Management",
+      "price": 599.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 180,
+        "lowStockThreshold": 25
+      },
+      "specifications": {
+        "version": "5.3.2",
+        "releaseDate": "2023-02-15",
+        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German", "French"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
+          "recommendedRAM": "4GB",
+          "diskSpace": "1GB"
+        }
+      },
+      "features": [
+        "Gantt chart planning",
+        "Resource allocation",
+        "Time tracking",
+        "Budget management",
+        "Task dependencies",
+        "Team collaboration",
+        "Mobile access"
+      ],
+      "compatibleProducts": ["PRD-009", "PRD-010"],
+      "media": {
+        "thumbnailUrl": "project_management_thumb.jpg",
+        "images": [
+          "project_management_1.jpg",
+          "project_management_2.jpg",
+          "project_management_3.jpg",
+          "project_management_4.jpg"
+        ],
+        "demoVideoUrl": "project_management_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-10-15T15:45:00Z",
+        "lastUpdated": "2023-03-22T13:10:35Z"
+      },
+      "status": "Active",
+      "popularity": 4.6
+    },
+    {
+      "id": "PRD-007",
+      "name": "eCommerce Platform",
+      "description": "Complete online store solution with inventory and order management",
+      "category": "Business Management",
+      "subCategory": "eCommerce",
+      "price": 999.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 100,
+        "lowStockThreshold": 20
+      },
+      "specifications": {
+        "version": "4.0.1",
+        "releaseDate": "2023-01-25",
+        "platforms": ["Cloud"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German", "French", "Spanish"],
+        "systemRequirements": {
+          "minimumBrowser": "Chrome 80+, Firefox 75+, Safari 14+, Edge 88+"
+        }
+      },
+      "features": [
+        "Product catalog management",
+        "Secure payment processing",
+        "Order fulfillment",
+        "Customer account management",
+        "Responsive design templates",
+        "SEO optimization tools",
+        "Analytics and reporting"
+      ],
+      "compatibleProducts": ["PRD-003", "PRD-004", "PRD-001"],
+      "media": {
+        "thumbnailUrl": "ecommerce_platform_thumb.jpg",
+        "images": [
+          "ecommerce_platform_1.jpg",
+          "ecommerce_platform_2.jpg",
+          "ecommerce_platform_3.jpg"
+        ],
+        "demoVideoUrl": "ecommerce_platform_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-09-20T10:30:00Z",
+        "lastUpdated": "2023-03-05T14:20:40Z"
+      },
+      "status": "Active",
+      "popularity": 4.5
+    },
+    {
+      "id": "PRD-008",
+      "name": "Business Intelligence Dashboard",
+      "description": "Advanced analytics and data visualization platform",
+      "category": "Business Intelligence",
+      "subCategory": "Analytics",
+      "price": 1499.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 75,
+        "lowStockThreshold": 10
+      },
+      "specifications": {
+        "version": "3.2.5",
+        "releaseDate": "2023-02-20",
+        "platforms": ["Windows", "macOS", "Cloud"],
+        "languages": ["English", "Norwegian", "Swedish"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 12",
+          "recommendedRAM": "16GB",
+          "diskSpace": "5GB"
+        }
+      },
+      "features": [
+        "Real-time data analytics",
+        "Custom dashboards",
+        "Predictive analytics",
+        "Data integration connectors",
+        "Automated reporting",
+        "Data visualization",
+        "Export capabilities"
+      ],
+      "compatibleProducts": ["PRD-001", "PRD-005", "PRD-009"],
+      "media": {
+        "thumbnailUrl": "bi_dashboard_thumb.jpg",
+        "images": [
+          "bi_dashboard_1.jpg",
+          "bi_dashboard_2.jpg",
+          "bi_dashboard_3.jpg"
+        ],
+        "demoVideoUrl": "bi_dashboard_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-11-12T09:15:00Z",
+        "lastUpdated": "2023-03-18T10:25:50Z"
+      },
+      "status": "Active",
+      "popularity": 4.4
+    },
+    {
+      "id": "PRD-009",
+      "name": "HR Management System",
+      "description": "Complete human resources management and employee self-service system",
+      "category": "Business Management",
+      "subCategory": "Human Resources",
+      "price": 899.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 130,
+        "lowStockThreshold": 20
+      },
+      "specifications": {
+        "version": "2.9.0",
+        "releaseDate": "2023-01-18",
+        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
+          "recommendedRAM": "6GB",
+          "diskSpace": "2GB"
+        }
+      },
+      "features": [
+        "Employee records management",
+        "Time and attendance tracking",
+        "Performance management",
+        "Recruitment and onboarding",
+        "Training management",
+        "Leave management",
+        "Employee self-service portal"
+      ],
+      "compatibleProducts": ["PRD-002", "PRD-006", "PRD-010"],
+      "media": {
+        "thumbnailUrl": "hr_system_thumb.jpg",
+        "images": [
+          "hr_system_1.jpg",
+          "hr_system_2.jpg",
+          "hr_system_3.jpg"
+        ],
+        "demoVideoUrl": "hr_system_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-10-08T14:00:00Z",
+        "lastUpdated": "2023-03-12T11:35:15Z"
+      },
+      "status": "Active",
+      "popularity": 4.3
+    },
+    {
+      "id": "PRD-010",
+      "name": "Document Management System",
+      "description": "Secure document storage, management, and collaboration platform",
+      "category": "Business Management",
+      "subCategory": "Document Management",
+      "price": 599.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 150,
+        "lowStockThreshold": 25
+      },
+      "specifications": {
+        "version": "4.5.2",
+        "releaseDate": "2023-02-12",
+        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German", "French", "Spanish"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
+          "recommendedRAM": "4GB",
+          "diskSpace": "10GB cloud storage included"
+        }
+      },
+      "features": [
+        "Document version control",
+        "Access control and permissions",
+        "Document workflow automation",
+        "Document scanning and OCR",
+        "Full-text search",
+        "Audit trails",
+        "Secure sharing and collaboration"
+      ],
+      "compatibleProducts": ["PRD-006", "PRD-009", "PRD-012"],
+      "media": {
+        "thumbnailUrl": "document_management_thumb.jpg",
+        "images": [
+          "document_management_1.jpg",
+          "document_management_2.jpg"
+        ],
+        "demoVideoUrl": "document_management_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-09-25T11:30:00Z",
+        "lastUpdated": "2023-03-08T15:50:10Z"
+      },
+      "status": "Active",
+      "popularity": 4.4
+    },
+    {
+      "id": "PRD-011",
+      "name": "Customer Relationship Management",
+      "description": "Complete CRM solution for sales, service, and marketing",
+      "category": "Business Management",
+      "subCategory": "CRM",
+      "price": 799.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 160,
+        "lowStockThreshold": 30
+      },
+      "specifications": {
+        "version": "5.1.0",
+        "releaseDate": "2023-01-22",
+        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German", "French"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
+          "recommendedRAM": "6GB",
+          "diskSpace": "2GB"
+        }
+      },
+      "features": [
+        "Contact and lead management",
+        "Sales pipeline tracking",
+        "Marketing campaign management",
+        "Service case management",
+        "Email integration",
+        "Reporting and analytics",
+        "Mobile access"
+      ],
+      "compatibleProducts": ["PRD-004", "PRD-007", "PRD-008"],
+      "media": {
+        "thumbnailUrl": "crm_thumb.jpg",
+        "images": [
+          "crm_1.jpg",
+          "crm_2.jpg",
+          "crm_3.jpg"
+        ],
+        "demoVideoUrl": "crm_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-10-10T13:45:00Z",
+        "lastUpdated": "2023-03-14T09:40:30Z"
+      },
+      "status": "Active",
+      "popularity": 4.7
+    },
+    {
+      "id": "PRD-012",
+      "name": "Time and Expense Tracker",
+      "description": "Streamlined time tracking and expense management solution",
+      "category": "Business Management",
+      "subCategory": "Time Tracking",
+      "price": 399.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 190,
+        "lowStockThreshold": 30
+      },
+      "specifications": {
+        "version": "3.7.1",
+        "releaseDate": "2023-02-08",
+        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
+          "recommendedRAM": "4GB",
+          "diskSpace": "1GB"
+        }
+      },
+      "features": [
+        "Time tracking",
+        "Expense tracking and reporting",
+        "Project billing",
+        "Approval workflows",
+        "Receipt scanning",
+        "Integration with accounting",
+        "Mobile time entry"
+      ],
+      "compatibleProducts": ["PRD-001", "PRD-006", "PRD-010"],
+      "media": {
+        "thumbnailUrl": "time_expense_thumb.jpg",
+        "images": [
+          "time_expense_1.jpg",
+          "time_expense_2.jpg"
+        ],
+        "demoVideoUrl": "time_expense_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-11-02T10:20:00Z",
+        "lastUpdated": "2023-03-09T12:15:45Z"
+      },
+      "status": "Active",
+      "popularity": 4.2
+    },
+    {
+      "id": "PRD-013",
+      "name": "Expense Management Pro",
+      "description": "Advanced expense reporting and reimbursement system",
+      "category": "Financial Software",
+      "subCategory": "Expense Management",
+      "price": 449.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": false,
+        "quantity": 0,
+        "lowStockThreshold": 15,
+        "expectedRestockDate": "2023-04-15"
+      },
+      "specifications": {
+        "version": "2.0.3",
+        "releaseDate": "2023-01-05",
+        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
+        "languages": ["English", "Norwegian", "Swedish"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
+          "recommendedRAM": "4GB",
+          "diskSpace": "1GB"
+        }
+      },
+      "features": [
+        "Receipt scanning with OCR",
+        "Multi-currency support",
+        "Expense policy enforcement",
+        "Approval workflows",
+        "Corporate card integration",
+        "Mileage tracking",
+        "Per diem calculations"
+      ],
+      "compatibleProducts": ["PRD-001", "PRD-002", "PRD-012"],
+      "media": {
+        "thumbnailUrl": "expense_pro_thumb.jpg",
+        "images": [
+          "expense_pro_1.jpg",
+          "expense_pro_2.jpg"
+        ],
+        "demoVideoUrl": "expense_pro_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-10-22T08:35:00Z",
+        "lastUpdated": "2023-03-01T14:25:55Z"
+      },
+      "status": "Out of Stock",
+      "popularity": 4.3
+    },
+    {
+      "id": "PRD-014",
+      "name": "Business Compliance Suite",
+      "description": "Regulatory compliance and risk management solution",
+      "category": "Business Management",
+      "subCategory": "Compliance",
+      "price": 1299.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 65,
+        "lowStockThreshold": 15
+      },
+      "specifications": {
+        "version": "1.9.5",
+        "releaseDate": "2023-01-28",
+        "platforms": ["Windows", "macOS", "Cloud"],
+        "languages": ["English", "Norwegian"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 12",
+          "recommendedRAM": "8GB",
+          "diskSpace": "3GB"
+        }
+      },
+      "features": [
+        "Regulatory tracking",
+        "Compliance assessment",
+        "Risk register",
+        "Control monitoring",
+        "Audit management",
+        "Policy management",
+        "Compliance reporting"
+      ],
+      "compatibleProducts": ["PRD-001", "PRD-008", "PRD-010"],
+      "media": {
+        "thumbnailUrl": "compliance_suite_thumb.jpg",
+        "images": [
+          "compliance_suite_1.jpg",
+          "compliance_suite_2.jpg"
+        ],
+        "demoVideoUrl": "compliance_suite_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-11-15T15:10:00Z",
+        "lastUpdated": "2023-03-17T11:55:25Z"
+      },
+      "status": "Active",
+      "popularity": 4.0
+    },
+    {
+      "id": "PRD-015",
+      "name": "ERP System - Small Business",
+      "description": "All-in-one business management solution for small businesses",
+      "category": "Business Management",
+      "subCategory": "ERP",
+      "price": 1999.00,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 50,
+        "lowStockThreshold": 10
+      },
+      "specifications": {
+        "version": "6.1.0",
+        "releaseDate": "2023-02-01",
+        "platforms": ["Windows", "macOS", "Cloud"],
+        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German"],
+        "systemRequirements": {
+          "minimumOS": "Windows 10 / macOS 12",
+          "recommendedRAM": "16GB",
+          "diskSpace": "8GB"
+        }
+      },
+      "features": [
+        "Accounting and finance",
+        "Inventory management",
+        "Sales and CRM",
+        "Purchasing",
+        "Human resources",
+        "Project management",
+        "Manufacturing",
+        "Reporting and analytics"
+      ],
+      "compatibleProducts": [],
+      "media": {
+        "thumbnailUrl": "erp_small_thumb.jpg",
+        "images": [
+          "erp_small_1.jpg",
+          "erp_small_2.jpg",
+          "erp_small_3.jpg"
+        ],
+        "demoVideoUrl": "erp_small_demo.mp4"
+      },
+      "metadata": {
+        "createdAt": "2022-10-01T09:00:00Z",
+        "lastUpdated": "2023-03-25T10:15:40Z"
+      },
+      "status": "Active",
+      "popularity": 4.8
+    }
+  ],
+  "categories": [
+    {
+      "id": "CAT-001",
+      "name": "Financial Software",
+      "description": "Software for managing financial operations",
+      "subCategories": [
+        {
+          "id": "SUBCAT-001",
+          "name": "Accounting"
+        },
+        {
+          "id": "SUBCAT-002",
+          "name": "Payroll"
+        },
+        {
+          "id": "SUBCAT-003",
+          "name": "Planning"
+        },
+        {
+          "id": "SUBCAT-004",
+          "name": "Expense Management"
+        }
+      ]
+    },
+    {
+      "id": "CAT-002",
+      "name": "Business Management",
+      "description": "Solutions for managing business operations",
+      "subCategories": [
+        {
+          "id": "SUBCAT-005",
+          "name": "Inventory"
+        },
+        {
+          "id": "SUBCAT-006",
+          "name": "Point of Sale"
+        },
+        {
+          "id": "SUBCAT-007",
+          "name": "Project Management"
+        },
+        {
+          "id": "SUBCAT-008",
+          "name": "eCommerce"
+        },
+        {
+          "id": "SUBCAT-009",
+          "name": "Human Resources"
+        },
+        {
+          "id": "SUBCAT-010",
+          "name": "Document Management"
+        },
+        {
+          "id": "SUBCAT-011",
+          "name": "CRM"
+        },
+        {
+          "id": "SUBCAT-012",
+          "name": "Time Tracking"
+        },
+        {
+          "id": "SUBCAT-013",
+          "name": "Compliance"
+        },
+        {
+          "id": "SUBCAT-014",
+          "name": "ERP"
+        }
+      ]
+    },
+    {
+      "id": "CAT-003",
+      "name": "Business Intelligence",
+      "description": "Tools for data analysis and decision making",
+      "subCategories": [
+        {
+          "id": "SUBCAT-015",
+          "name": "Analytics"
+        },
+        {
+          "id": "SUBCAT-016",
+          "name": "Reporting"
+        },
+        {
+          "id": "SUBCAT-017",
+          "name": "Data Visualization"
+        }
+      ]
+    }
+  ]
+}

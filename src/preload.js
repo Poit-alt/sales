@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld('electron', {
     }
   },
   receiveFromMain: (channel, func) => {
-    const validChannels = ['fromMain', 'dataResult', 'error', 'window-state-change'];
+    const validChannels = ['fromMain', 'dataResult', 'error', 'window-state-change', 'trigger-open-database'];
     if (validChannels.includes(channel)) {
       // Deliberately strip event as it includes `sender` 
       ipcRenderer.on(channel, (event, ...args) => func(...args));

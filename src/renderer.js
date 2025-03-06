@@ -3,6 +3,13 @@
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded');
   
+  // Add console log to debug tab navigation
+  console.log('Tabs setup:', {
+    sidebarLinks: document.querySelectorAll('.sidebar-nav a[data-tab]'),
+    tabContents: document.querySelectorAll('.tab-content'),
+    productsTab: document.getElementById('products-tab')
+  });
+  
   // Detect platform and add appropriate class to body
   // This will be used for platform-specific styling
   if (window.electron && window.electron.platform) {
@@ -122,15 +129,23 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const target = link.dataset.tab;
       
+      console.log(`Tab clicked: ${target}`);
+      
       // Remove active class from all links and contents
       sidebarLinks.forEach(l => l.classList.remove('active'));
       tabContents.forEach(c => c.classList.remove('active'));
       
       // Add active class to selected link and content
       link.classList.add('active');
-      document.getElementById(`${target}-tab`).classList.add('active');
+      const targetTab = document.getElementById(`${target}-tab`);
+      if (targetTab) {
+        targetTab.classList.add('active');
+        console.log(`Activated tab: ${target}-tab`);
+      } else {
+        console.error(`Tab element not found: ${target}-tab`);
+      }
       
-          // Update header text based on selected tab
+      // Update header text based on selected tab
       const contentHeader = document.querySelector('.content-header h1');
       if (contentHeader) {
         contentHeader.textContent = target === 'dashboard' ? 'Project Dashboard' : 'Product Catalog';
@@ -141,10 +156,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (dbPathContainer) {
         if (target === 'products') {
           // Show the db path container in the products tab
-          document.querySelector('#products-tab .products-header').prepend(dbPathContainer);
+          const productsHeader = document.querySelector('#products-tab .products-header');
+          if (productsHeader) {
+            productsHeader.prepend(dbPathContainer);
+          }
         } else {
           // Hide the db path container from other tabs
-          dbPathContainer.remove();
+          if (dbPathContainer.parentNode) {
+            dbPathContainer.parentNode.removeChild(dbPathContainer);
+          }
         }
       }
     });
@@ -182,12 +202,19 @@ document.addEventListener('DOMContentLoaded', () => {
         loadDatabaseSummary(dbPath);
       } else {
         displayNoDatabasePath();
+        // Try to load local products.json
+        loadProducts();
       }
+    } else {
+      // If running without Electron, load from local products.json
+      loadProducts();
     }
   }
   
   // Display the database path in UI
   function displayDatabasePath(path) {
+    if (!dbPathContainer) return;
+    
     dbPathContainer.innerHTML = `
       <div class="db-path-display">
         <div class="path">${path}</div>
@@ -198,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Display when no database path is set
   function displayNoDatabasePath() {
+    if (!dbPathContainer) return;
+    
     dbPathContainer.innerHTML = `
       <div class="db-path-display">
         <div class="path">No database directory selected</div>
@@ -237,10 +266,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Update the UI
-        document.getElementById('num-products').textContent = productFiles || '-';
-        document.getElementById('num-categories').textContent = categoryFiles || '-';
-        document.getElementById('num-sales').textContent = salesFiles || '-';
-        document.getElementById('num-customers').textContent = customerFiles || '-';
+        const numProductsEl = document.getElementById('num-products');
+        const numCategoriesEl = document.getElementById('num-categories');
+        const numSalesEl = document.getElementById('num-sales');
+        const numCustomersEl = document.getElementById('num-customers');
+        
+        if (numProductsEl) numProductsEl.textContent = productFiles || '-';
+        if (numCategoriesEl) numCategoriesEl.textContent = categoryFiles || '-';
+        if (numSalesEl) numSalesEl.textContent = salesFiles || '-';
+        if (numCustomersEl) numCustomersEl.textContent = customerFiles || '-';
         
         // Load products data (for the Products tab)
         await loadProducts(productFileNames);
@@ -253,34 +287,113 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Load products from JSON files
   async function loadProducts(fileNames) {
-    if (!window.electron || !window.electron.database) return;
+    if (!window.electron || !window.electron.database) {
+      // If we're running in development or without Electron, load directly from local file
+      try {
+        const response = await fetch('/data/products.json');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // Load products from the products.json file structure
+        if (data && data.products) {
+          console.log("Loaded products from local JSON file:", data.products.length);
+          allProducts = data.products;
+          
+          // Extract categories from both products and category list
+          allProducts.forEach(product => {
+            if (product.category) {
+              categories.add(product.category);
+            }
+            if (product.subCategory) {
+              categories.add(product.subCategory);
+            }
+          });
+          
+          // If there's a categories section, use those as well
+          if (data.categories) {
+            data.categories.forEach(category => {
+              categories.add(category.name);
+              if (category.subCategories) {
+                category.subCategories.forEach(sub => {
+                  categories.add(sub.name);
+                });
+              }
+            });
+          }
+          
+          // Update category filter
+          updateCategoryFilter();
+          
+          // Apply initial filtering/search (show all)
+          applyFilters();
+        }
+      } catch (err) {
+        console.error('Error loading products from local file:', err);
+      }
+      return;
+    }
     
     try {
       allProducts = [];
       categories.clear(); 
       
-      // Load each product file
-      for (const fileName of fileNames) {
-        const result = await window.electron.database.readFile(fileName);
+      // First, try to load products.json directly
+      const result = await window.electron.database.readFile('products.json');
+      
+      if (!result.error && result.data && result.data.products) {
+        // Use the products from products.json
+        allProducts = result.data.products;
         
-        if (result.error) {
-          console.error(`Error reading file ${fileName}:`, result.error);
-          continue;
-        }
+        // Extract categories from products
+        allProducts.forEach(product => {
+          if (product.category) {
+            categories.add(product.category);
+          }
+          if (product.subCategory) {
+            categories.add(product.subCategory);
+          }
+        });
         
-        if (result.data) {
-          // Handle both array and single object formats
-          const products = Array.isArray(result.data) ? result.data : [result.data];
-          
-          // Add products to the array
-          allProducts = [...allProducts, ...products];
-          
-          // Extract categories
-          products.forEach(product => {
-            if (product.category) {
-              categories.add(product.category);
+        // If there's a categories section, use those as well
+        if (result.data.categories) {
+          result.data.categories.forEach(category => {
+            categories.add(category.name);
+            if (category.subCategories) {
+              category.subCategories.forEach(sub => {
+                categories.add(sub.name);
+              });
             }
           });
+        }
+      } else {
+        // Fallback to loading individual product files if products.json isn't found
+        for (const fileName of fileNames) {
+          const result = await window.electron.database.readFile(fileName);
+          
+          if (result.error) {
+            console.error(`Error reading file ${fileName}:`, result.error);
+            continue;
+          }
+          
+          if (result.data) {
+            // Handle both array and single object formats
+            const products = Array.isArray(result.data) ? result.data : [result.data];
+            
+            // Add products to the array
+            allProducts = [...allProducts, ...products];
+            
+            // Extract categories
+            products.forEach(product => {
+              if (product.category) {
+                categories.add(product.category);
+              }
+              if (product.subCategory) {
+                categories.add(product.subCategory);
+              }
+            });
+          }
         }
       }
       
@@ -311,7 +424,10 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!dbPathContainer) {
             dbPathContainer = document.createElement('div');
             dbPathContainer.id = 'db-path-container';
-            document.querySelector('#products-tab .products-header').prepend(dbPathContainer);
+            const productsHeader = document.querySelector('#products-tab .products-header');
+            if (productsHeader) {
+              productsHeader.prepend(dbPathContainer);
+            }
           }
           
           // Update database path display
@@ -355,8 +471,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear existing options (keep the "All Categories" option)
     categoryFilter.innerHTML = '<option value="">All Categories</option>';
     
+    // Create a sorted array of categories
+    const sortedCategories = Array.from(categories).sort();
+    
     // Add options for each category
-    categories.forEach(category => {
+    sortedCategories.forEach(category => {
       const option = document.createElement('option');
       option.value = category;
       option.textContent = category;
@@ -371,13 +490,27 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Filter products
     filteredProducts = allProducts.filter(product => {
-      // Check if product name contains search term
+      // Check if product name or description contains search term
       const nameMatch = product.name && product.name.toLowerCase().includes(searchTerm);
+      const descMatch = product.description && product.description.toLowerCase().includes(searchTerm);
+      const searchMatch = nameMatch || descMatch;
       
       // Check if product matches category filter
-      const categoryMatch = !categoryValue || (product.category === categoryValue);
+      const categoryMatch = !categoryValue || 
+                           (product.category === categoryValue) || 
+                           (product.subCategory === categoryValue);
       
-      return nameMatch && categoryMatch;
+      return searchMatch && categoryMatch;
+    });
+    
+    // Sort products by popularity if available, otherwise by name
+    filteredProducts.sort((a, b) => {
+      if (a.popularity !== undefined && b.popularity !== undefined) {
+        return b.popularity - a.popularity; // Higher popularity first
+      } else {
+        // Fallback to name sort
+        return (a.name || '').localeCompare(b.name || '');
+      }
     });
     
     // Update table and pagination
@@ -423,29 +556,41 @@ document.addEventListener('DOMContentLoaded', () => {
     pageProducts.forEach(product => {
       const row = document.createElement('tr');
       
-      // Determine status based on stock or active flag
-      let status = 'Active';
+      // Determine status based on stock status or explicit status field
+      let status = product.status || 'Active';
       let statusClass = 'status-active';
       
-      if (product.active === false) {
-        status = 'Inactive';
+      if (status === 'Inactive') {
         statusClass = 'status-inactive';
-      } else if (product.stock === 0 || product.inStock === false) {
+      } else if (status === 'Out of Stock' || (product.stockStatus && !product.stockStatus.inStock)) {
         status = 'Out of Stock';
         statusClass = 'status-out-of-stock';
       }
       
+      // Get stock quantity
+      let stockDisplay = 'N/A';
+      if (product.stockStatus && product.stockStatus.quantity !== undefined) {
+        stockDisplay = product.stockStatus.quantity;
+      } else if (product.stock !== undefined) {
+        stockDisplay = product.stock;
+      } else if (product.stockStatus && product.stockStatus.inStock !== undefined) {
+        stockDisplay = product.stockStatus.inStock ? 'In Stock' : 'Out of Stock';
+      }
+      
+      // Format price with currency
+      let priceDisplay = formatPrice(product.price, product.currency);
+      
       row.innerHTML = `
-        <td>${product.id || product.productId || ''}</td>
+        <td>${product.id || ''}</td>
         <td>${product.name || ''}</td>
-        <td>${product.category || ''}</td>
-        <td>${formatPrice(product.price)}</td>
-        <td>${product.stock !== undefined ? product.stock : (product.inStock ? 'In Stock' : 'Out of Stock')}</td>
+        <td>${product.category || ''} ${product.subCategory ? `/ ${product.subCategory}` : ''}</td>
+        <td>${priceDisplay}</td>
+        <td>${stockDisplay}</td>
         <td><span class="${statusClass}">${status}</span></td>
         <td>
           <div class="actions">
-            <button class="btn-icon" data-action="view" data-id="${product.id || product.productId}"><i class="fa fa-eye"></i></button>
-            <button class="btn-icon" data-action="edit" data-id="${product.id || product.productId}"><i class="fa fa-edit"></i></button>
+            <button class="btn-icon" data-action="view" data-id="${product.id}"><i class="fa fa-eye"></i></button>
+            <button class="btn-icon" data-action="edit" data-id="${product.id}"><i class="fa fa-edit"></i></button>
           </div>
         </td>
       `;
@@ -461,10 +606,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Project cards are now static in the HTML
   
   // Helper function to format price
-  function formatPrice(price) {
+  function formatPrice(price, currency = 'USD') {
     if (price === undefined) return '';
     
-    return '$' + parseFloat(price).toFixed(2);
+    const formatOptions = {
+      USD: { symbol: '$', position: 'before' },
+      EUR: { symbol: '€', position: 'after' },
+      GBP: { symbol: '£', position: 'before' },
+      NOK: { symbol: 'kr', position: 'after' },
+      SEK: { symbol: 'kr', position: 'after' },
+      DKK: { symbol: 'kr', position: 'after' }
+    };
+    
+    const currencyFormat = formatOptions[currency] || formatOptions['USD'];
+    const formattedPrice = parseFloat(price).toFixed(2);
+    
+    return currencyFormat.position === 'before' 
+      ? `${currencyFormat.symbol}${formattedPrice}`
+      : `${formattedPrice} ${currencyFormat.symbol}`;
   }
   
   // Set up action buttons
@@ -532,5 +691,33 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Received data from main process:', data);
       // Update UI with the data
     });
+    
+    // Listen for trigger-open-database event from main process (menu item)
+    window.electron.receiveFromMain('trigger-open-database', () => {
+      console.log('Triggered database open from menu');
+      
+      // First, switch to products tab
+      const productsLink = document.querySelector('.sidebar-nav a[data-tab="products"]');
+      if (productsLink) {
+        productsLink.click();
+      }
+      
+      // Then trigger the database path selection
+      const selectDbPathBtn = document.getElementById('select-db-path');
+      if (selectDbPathBtn) {
+        selectDbPathBtn.click();
+      }
+    });
+  }
+  
+  // Debug function - can be triggered from DevTools
+  window.switchToProductsTab = function() {
+    console.log('Manually switching to products tab');
+    const productsLink = document.querySelector('.sidebar-nav a[data-tab="products"]');
+    if (productsLink) {
+      productsLink.click();
+    } else {
+      console.error('Products tab link not found');
+    }
   }
 });

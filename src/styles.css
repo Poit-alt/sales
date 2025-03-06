@@ -68,9 +68,13 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 64px;
+  height: 48px; /* Reduced from 64px */
   -webkit-app-region: drag; /* Makes the header a draggable region */
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 101; /* Higher than sidebar */
 }
 
 /* Title is centered on macOS, but left-aligned on Windows/Linux */
@@ -86,7 +90,6 @@ body.platform-linux .logo {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
   margin-right: 8px; /* Add some spacing from the edge */
 }
 
@@ -105,6 +108,16 @@ body.platform-linux .logo {
   -webkit-app-region: no-drag; /* Prevent interaction problems with draggable header */
 }
 
+#toggle-sidebar {
+  width: 32px;
+  height: 32px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px var(--shadow);
+}
+
 .btn-icon:hover {
   background-color: rgba(var(--accent-rgb), 0.1);
   color: var(--accent);
@@ -113,28 +126,27 @@ body.platform-linux .logo {
 /* User profile has been removed */
 
 .logo {
-  font-size: 1.5rem;
+  font-size: 1.2rem; /* Reduced from 1.5rem */
   font-weight: bold;
   color: var(--accent);
   -webkit-app-region: drag; /* Make sure logo is still draggable */
 }
 
 .theme-toggle {
-  background: none;
-  border: none;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 1.2rem;
-  padding: 0.5rem;
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s, color 0.2s;
-  -webkit-app-region: no-drag; /* Prevent interaction problems with draggable header */
   position: relative;
+  box-shadow: 0 2px 4px var(--shadow);
 }
 
 /* Show/hide moon and sun icons based on theme */
@@ -160,15 +172,74 @@ html[data-theme="light"] .theme-toggle .fa-sun-o {
 }
 
 main {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  min-height: calc(100vh - 60px);
+  display: block;
+  min-height: calc(100vh - 48px);
+  margin-top: 48px; /* Match new header height */
 }
 
 .sidebar {
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--border);
-  padding: 1.5rem 1rem;
+  transition: width 0.3s ease;
+  width: 240px;
+  overflow: hidden;
+  position: fixed;
+  top: 48px; /* Match new header height */
+  bottom: 0;
+  height: auto; /* Let it extend to the bottom */
+  z-index: 100;
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%; /* Full height of sidebar */
+  padding: 1.5rem 1rem 1rem;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+body.collapsed-sidebar .sidebar {
+  width: 60px;
+}
+
+body.collapsed-sidebar .sidebar-content {
+  padding: 1.5rem 0.5rem 1rem;
+}
+
+body.collapsed-sidebar .sidebar-footer {
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+#toggle-sidebar i {
+  transition: transform 0.3s ease;
+}
+
+.mobile-icon {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body:not(.collapsed-sidebar) .sidebar-footer {
+    padding-bottom: 40px; /* Extra space on mobile */
+  }
+}
+
+body.collapsed-sidebar #toggle-sidebar i.fa-angle-left {
+  transform: rotate(180deg);
+}
+
+body.collapsed-sidebar .content {
+  margin-left: 60px;
 }
 
 .sidebar-nav {
@@ -192,7 +263,9 @@ main {
   border-radius: 8px;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color 0.2s, color 0.2s, padding 0.3s;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .sidebar-nav a:hover, .sidebar-nav a.active {
@@ -203,10 +276,31 @@ main {
 .sidebar-nav a i {
   margin-right: 0.75rem;
   font-size: 1.2rem;
+  min-width: 1.2rem;
+  text-align: center;
+}
+
+body.collapsed-sidebar .sidebar-nav a {
+  padding: 0.75rem;
+  justify-content: center;
+}
+
+body.collapsed-sidebar .sidebar-nav a span {
+  display: none;
+}
+
+body.collapsed-sidebar .sidebar-nav a i {
+  margin-right: 0;
+}
+
+body.collapsed-sidebar .sidebar-nav li.divider {
+  margin: 0.5rem 0;
 }
 
 .content {
   padding: 2rem;
+  min-height: 100vh;
+  margin-left: 240px; /* Match sidebar width */
 }
 
 .content-header {
@@ -952,12 +1046,96 @@ tr:hover {
 }
 
 @media (max-width: 768px) {
-  main {
-    grid-template-columns: 1fr;
+  .content {
+    margin-left: 0;
   }
   
   .sidebar {
+    position: fixed;
+    left: -240px;
+    top: 48px; /* Match new header height */
+    bottom: 0;
+    height: auto;
+    z-index: 100;
+    transition: left 0.3s ease, width 0.3s ease;
+    box-shadow: none;
+  }
+  
+  body:not(.collapsed-sidebar) .sidebar {
+    left: 0;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Show only the sidebar toggle button when sidebar is collapsed on mobile */
+  body.collapsed-sidebar .sidebar {
+    left: auto;
+    right: 0;
+    width: auto;
+    height: auto;
+    top: auto;
+    bottom: 20px;
+    background: transparent;
+    border: none;
+  }
+  
+  /* Add a floating theme toggle button on mobile when sidebar is collapsed */
+  body.collapsed-sidebar .theme-toggle-mobile {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    border: 1px solid var(--border);
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+  
+  body.collapsed-sidebar .sidebar-content {
+    padding: 0;
+  }
+  
+  body.collapsed-sidebar .sidebar-nav,
+  body.collapsed-sidebar .sidebar-footer .theme-toggle {
     display: none;
+  }
+  
+  body.collapsed-sidebar .sidebar-footer {
+    padding: 0;
+    border: none;
+  }
+  
+  body.collapsed-sidebar #toggle-sidebar {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    background-color: var(--accent);
+    color: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+  
+  body.collapsed-sidebar #toggle-sidebar i.fa-angle-left {
+    display: none;
+  }
+  
+  body.collapsed-sidebar #toggle-sidebar i.fa-bars {
+    display: block;
+    transform: rotate(0);
+    font-size: 1.5rem;
+  }
+  
+  .content {
+    padding-bottom: 80px; /* Extra space for mobile scrolling */
   }
   
   .dashboard {

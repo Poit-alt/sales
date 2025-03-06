@@ -13,23 +13,33 @@
     <header>
       <div class="logo">ProjectHub</div>
       <div class="header-actions">
-        <button id="theme-toggle" class="theme-toggle">
-          <i class="fa fa-moon-o"></i>
-          <i class="fa fa-sun-o"></i>
-        </button>
+        <!-- Dark mode toggle moved to sidebar footer -->
       </div>
     </header>
     
     <main>
       <aside class="sidebar">
-        <ul class="sidebar-nav">
-          <li><a href="#" data-tab="dashboard" class="active"><i class="fa fa-sitemap"></i> Projects</a></li>
-          <li><a href="#" data-tab="products"><i class="fa fa-cubes"></i> Products</a></li>
-          <li><a href="#"><i class="fa fa-file-text"></i> Documents</a></li>
-          <li class="divider"></li>
-          <li><a href="#"><i class="fa fa-cog"></i> Settings</a></li>
-          <li><a href="#"><i class="fa fa-question-circle"></i> Help</a></li>
-        </ul>
+        <div class="sidebar-content">
+          <ul class="sidebar-nav">
+            <li><a href="#" data-tab="dashboard" class="active"><i class="fa fa-sitemap"></i> <span>Projects</span></a></li>
+            <li><a href="#" data-tab="products"><i class="fa fa-cubes"></i> <span>Products</span></a></li>
+            <li><a href="#"><i class="fa fa-file-text"></i> <span>Documents</span></a></li>
+            <li class="divider"></li>
+            <li><a href="#"><i class="fa fa-cog"></i> <span>Settings</span></a></li>
+            <li><a href="#"><i class="fa fa-question-circle"></i> <span>Help</span></a></li>
+          </ul>
+          
+          <div class="sidebar-footer">
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">
+              <i class="fa fa-moon-o"></i>
+              <i class="fa fa-sun-o"></i>
+            </button>
+            <button id="toggle-sidebar" class="btn-icon" title="Toggle Sidebar">
+              <i class="fa fa-angle-left"></i>
+              <i class="fa fa-bars mobile-icon"></i>
+            </button>
+          </div>
+        </div>
       </aside>
       
       <section class="content">

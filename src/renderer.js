@@ -29,6 +29,70 @@ document.addEventListener('DOMContentLoaded', () => {
   // We've removed custom window controls
   // The native window controls will be used instead
   
+  // Sidebar toggle functionality
+  const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.addEventListener('click', () => {
+      document.body.classList.toggle('collapsed-sidebar');
+      // Store sidebar state in localStorage
+      const isSidebarCollapsed = document.body.classList.contains('collapsed-sidebar');
+      localStorage.setItem('sidebarCollapsed', isSidebarCollapsed);
+      
+      // For mobile: Create floating theme toggle when sidebar is collapsed
+      updateMobileThemeToggle();
+    });
+    
+    // Check saved sidebar state
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+      document.body.classList.add('collapsed-sidebar');
+      // Initialize mobile theme toggle if needed
+      updateMobileThemeToggle();
+    }
+  }
+  
+  // Function to create/update mobile theme toggle button
+  function updateMobileThemeToggle() {
+    const isMobile = window.innerWidth <= 768;
+    const isSidebarCollapsed = document.body.classList.contains('collapsed-sidebar');
+    
+    // Remove existing mobile theme toggle if it exists
+    const existingToggle = document.querySelector('.theme-toggle-mobile');
+    if (existingToggle) {
+      existingToggle.remove();
+    }
+    
+    // Create new mobile theme toggle if needed
+    if (isMobile && isSidebarCollapsed) {
+      const mobileThemeToggle = document.createElement('button');
+      mobileThemeToggle.className = 'theme-toggle-mobile';
+      mobileThemeToggle.title = 'Toggle Dark Mode';
+      
+      // Add moon/sun icons based on current theme
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const iconClass = currentTheme === 'light' ? 'fa-moon-o' : 'fa-sun-o';
+      mobileThemeToggle.innerHTML = `<i class="fa ${iconClass}"></i>`;
+      
+      // Add event listener to toggle theme
+      mobileThemeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        // Update icon
+        const icon = mobileThemeToggle.querySelector('i');
+        icon.className = `fa ${newTheme === 'light' ? 'fa-moon-o' : 'fa-sun-o'}`;
+      });
+      
+      document.body.appendChild(mobileThemeToggle);
+    }
+  }
+  
+  // Listen for window resize to update mobile toggle
+  window.addEventListener('resize', () => {
+    updateMobileThemeToggle();
+  });
+  
   // Dark mode toggle functionality
   const themeToggleBtn = document.getElementById('theme-toggle');
   const htmlElement = document.documentElement;

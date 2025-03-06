@@ -23,5 +23,12 @@ contextBridge.exposeInMainWorld('electron', {
   },
   // Platform info
   platform: process.platform,
-  // Add other APIs as needed
+  
+  // Database path operations
+  database: {
+    selectPath: () => ipcRenderer.invoke('select-database-path'),
+    getPath: () => ipcRenderer.invoke('get-database-path'),
+    listFiles: (fileType) => ipcRenderer.invoke('list-database-files', fileType),
+    readFile: (fileName) => ipcRenderer.invoke('read-database-file', fileName)
+  }
 });

@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -134,7 +135,123 @@ function setupIPC() {
     event.reply('fromMain', { success: true, message: 'Project data saved successfully' });
   });
   
-  // We've removed custom window controls in favor of native ones
+  // Database path handlers
+ipcMain.handle('select-database-path', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Select Database Directory',
+    buttonLabel: 'Select Folder'
+  });
+  
+  if (canceled) {
+    return null;
+  }
+  
+  // Store the selected path in app settings
+  const dbPath = filePaths[0];
+  app.databasePath = dbPath;
+  
+  // Save the path to user preferences
+  saveSettings({ databasePath: dbPath });
+  
+  return dbPath;
+});
+
+ipcMain.handle('get-database-path', () => {
+  // If we already have it in memory
+  if (app.databasePath) {
+    return app.databasePath;
+  }
+  
+  // Otherwise try to load from saved settings
+  const settings = loadSettings();
+  if (settings && settings.databasePath) {
+    app.databasePath = settings.databasePath;
+    return settings.databasePath;
+  }
+  
+  return null;
+});
+
+ipcMain.handle('list-database-files', async (event, fileType) => {
+  if (!app.databasePath) {
+    const settings = loadSettings();
+    if (settings && settings.databasePath) {
+      app.databasePath = settings.databasePath;
+    } else {
+      return { error: 'No database path set' };
+    }
+  }
+  
+  try {
+    const files = await fs.promises.readdir(app.databasePath);
+    // Filter for JSON files or specific file types
+    const jsonFiles = files.filter(file => {
+      if (fileType) {
+        return file.endsWith('.json') && file.includes(fileType);
+      }
+      return file.endsWith('.json');
+    });
+    
+    return {
+      path: app.databasePath,
+      files: jsonFiles
+    };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle('read-database-file', async (event, fileName) => {
+  if (!app.databasePath) {
+    const settings = loadSettings();
+    if (settings && settings.databasePath) {
+      app.databasePath = settings.databasePath;
+    } else {
+      return { error: 'No database path set' };
+    }
+  }
+  
+  try {
+    const filePath = path.join(app.databasePath, fileName);
+    const data = await fs.promises.readFile(filePath, 'utf8');
+    return { data: JSON.parse(data) };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+// Settings helpers
+function getSettingsPath() {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
+
+function saveSettings(settings) {
+  try {
+    const settingsPath = getSettingsPath();
+    const currentSettings = loadSettings() || {};
+    const newSettings = { ...currentSettings, ...settings };
+    fs.writeFileSync(settingsPath, JSON.stringify(newSettings, null, 2));
+    return true;
+  } catch (err) {
+    console.error('Failed to save settings:', err);
+    return false;
+  }
+}
+
+function loadSettings() {
+  try {
+    const settingsPath = getSettingsPath();
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf8');
+      return JSON.parse(data);
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to load settings:', err);
+    return null;
+  }
+}
 }
 
 // Quit when all windows are closed, except on macOS.

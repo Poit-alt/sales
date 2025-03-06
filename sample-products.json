@@ -1,0 +1,182 @@
+[
+  {
+    "id": "P001",
+    "name": "Ergonomic Office Chair",
+    "category": "Furniture",
+    "price": 249.99,
+    "stock": 15,
+    "active": true,
+    "description": "High-quality ergonomic office chair with lumbar support."
+  },
+  {
+    "id": "P002",
+    "name": "Standing Desk",
+    "category": "Furniture",
+    "price": 399.99,
+    "stock": 8,
+    "active": true,
+    "description": "Adjustable height standing desk for improved productivity."
+  },
+  {
+    "id": "P003",
+    "name": "Wireless Keyboard",
+    "category": "Electronics",
+    "price": 79.99,
+    "stock": 23,
+    "active": true,
+    "description": "Compact wireless keyboard with long battery life."
+  },
+  {
+    "id": "P004",
+    "name": "Wireless Mouse",
+    "category": "Electronics",
+    "price": 49.99,
+    "stock": 34,
+    "active": true,
+    "description": "Ergonomic wireless mouse with precision tracking."
+  },
+  {
+    "id": "P005",
+    "name": "27-inch Monitor",
+    "category": "Electronics",
+    "price": 299.99,
+    "stock": 10,
+    "active": true,
+    "description": "High-resolution 27-inch monitor for improved productivity."
+  },
+  {
+    "id": "P006",
+    "name": "Desk Lamp",
+    "category": "Lighting",
+    "price": 59.99,
+    "stock": 42,
+    "active": true,
+    "description": "Adjustable desk lamp with multiple brightness settings."
+  },
+  {
+    "id": "P007",
+    "name": "Desk Organizer",
+    "category": "Office Supplies",
+    "price": 29.99,
+    "stock": 56,
+    "active": true,
+    "description": "Multi-compartment desk organizer for improved organization."
+  },
+  {
+    "id": "P008",
+    "name": "Laptop Stand",
+    "category": "Accessories",
+    "price": 39.99,
+    "stock": 18,
+    "active": true,
+    "description": "Adjustable laptop stand for improved ergonomics."
+  },
+  {
+    "id": "P009",
+    "name": "Notebook Set",
+    "category": "Office Supplies",
+    "price": 19.99,
+    "stock": 120,
+    "active": true,
+    "description": "Set of 3 high-quality notebooks with different rulings."
+  },
+  {
+    "id": "P010",
+    "name": "Premium Pens",
+    "category": "Office Supplies",
+    "price": 12.99,
+    "stock": 200,
+    "active": true,
+    "description": "Pack of 10 premium ballpoint pens in various colors."
+  },
+  {
+    "id": "P011",
+    "name": "Desk Mat",
+    "category": "Accessories",
+    "price": 24.99,
+    "stock": 32,
+    "active": true,
+    "description": "Large desk mat providing a smooth surface for mouse and keyboard."
+  },
+  {
+    "id": "P012",
+    "name": "Headphone Stand",
+    "category": "Accessories",
+    "price": 19.99,
+    "stock": 27,
+    "active": true,
+    "description": "Sturdy headphone stand to keep your desk organized."
+  },
+  {
+    "id": "P013",
+    "name": "USB-C Hub",
+    "category": "Electronics",
+    "price": 69.99,
+    "stock": 15,
+    "active": true,
+    "description": "7-in-1 USB-C hub for expanded connectivity."
+  },
+  {
+    "id": "P014",
+    "name": "Wireless Charger",
+    "category": "Electronics",
+    "price": 34.99,
+    "stock": 42,
+    "active": true,
+    "description": "Fast wireless charger compatible with most modern smartphones."
+  },
+  {
+    "id": "P015",
+    "name": "Cable Management Box",
+    "category": "Accessories",
+    "price": 29.99,
+    "stock": 38,
+    "active": true,
+    "description": "Box to hide and organize cables for a cleaner desk setup."
+  },
+  {
+    "id": "P016",
+    "name": "Mechanical Keyboard",
+    "category": "Electronics",
+    "price": 129.99,
+    "stock": 0,
+    "active": true,
+    "description": "Premium mechanical keyboard with customizable backlighting."
+  },
+  {
+    "id": "P017",
+    "name": "File Cabinet",
+    "category": "Furniture",
+    "price": 159.99,
+    "stock": 7,
+    "active": true,
+    "description": "Compact file cabinet with three drawers for document storage."
+  },
+  {
+    "id": "P018",
+    "name": "Bookshelf",
+    "category": "Furniture",
+    "price": 189.99,
+    "stock": 4,
+    "active": true,
+    "description": "5-tier bookshelf for organizing books and display items."
+  },
+  {
+    "id": "P019",
+    "name": "Whiteboard",
+    "category": "Office Supplies",
+    "price": 79.99,
+    "stock": 12,
+    "active": true,
+    "description": "Large magnetic whiteboard for brainstorming and planning."
+  },
+  {
+    "id": "P020",
+    "name": "Conference Phone",
+    "category": "Electronics",
+    "price": 199.99,
+    "stock": 6,
+    "active": false,
+    "description": "High-quality conference phone for clear audio in meetings."
+  }
+]

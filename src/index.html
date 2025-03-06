@@ -23,12 +23,9 @@
     <main>
       <aside class="sidebar">
         <ul class="sidebar-nav">
-          <li><a href="#" class="active"><i class="fa fa-sitemap"></i> Projects</a></li>
-          <li><a href="#"><i class="fa fa-tasks"></i> Tasks</a></li>
-          <li><a href="#"><i class="fa fa-users"></i> Team</a></li>
-          <li><a href="#"><i class="fa fa-calendar"></i> Calendar</a></li>
+          <li><a href="#" data-tab="dashboard" class="active"><i class="fa fa-sitemap"></i> Projects</a></li>
+          <li><a href="#" data-tab="products"><i class="fa fa-cubes"></i> Products</a></li>
           <li><a href="#"><i class="fa fa-file-text"></i> Documents</a></li>
-          <li><a href="#"><i class="fa fa-line-chart"></i> Reports</a></li>
           <li class="divider"></li>
           <li><a href="#"><i class="fa fa-cog"></i> Settings</a></li>
           <li><a href="#"><i class="fa fa-question-circle"></i> Help</a></li>
@@ -39,267 +36,327 @@
         <div class="content-header">
           <h1>Project Dashboard</h1>
           <div class="content-actions">
-            <button class="button button-outline"><i class="fas fa-filter"></i> Filter</button>
-            <button class="button"><i class="fas fa-plus"></i> New Project</button>
+            <button class="button"><i class="fa fa-plus"></i> New Project</button>
           </div>
         </div>
         
         <div class="projects-summary">
           <div class="summary-card active">
-            <div class="summary-value">12</div>
-            <div class="summary-label">Active Projects</div>
+            <div class="summary-value" id="num-products">-</div>
+            <div class="summary-label">Products</div>
           </div>
           <div class="summary-card upcoming">
-            <div class="summary-value">5</div>
-            <div class="summary-label">Upcoming</div>
+            <div class="summary-value" id="num-categories">-</div>
+            <div class="summary-label">Categories</div>
           </div>
           <div class="summary-card completed">
-            <div class="summary-value">24</div>
-            <div class="summary-label">Completed</div>
+            <div class="summary-value" id="num-sales">-</div>
+            <div class="summary-label">Sales</div>
           </div>
           <div class="summary-card overdue">
-            <div class="summary-value">3</div>
-            <div class="summary-label">Overdue</div>
+            <div class="summary-value" id="num-customers">-</div>
+            <div class="summary-label">Customers</div>
           </div>
         </div>
         
-        <h2>Active Projects</h2>
+        <!-- Using sidebar navigation instead of tabs -->
         
-        <div class="project-grid">
-          <div class="project-card">
-            <div class="project-card-header">
-              <div class="project-priority high">High Priority</div>
-              <div class="project-menu"><i class="fas fa-ellipsis-v"></i></div>
-            </div>
-            <h3 class="project-title">Website Redesign</h3>
-            <div class="project-details">
-              <div class="project-completion">
-                <span class="completion-text">75% Complete</span>
-                <div class="progress-bar">
-                  <div class="progress" style="width: 75%"></div>
-                </div>
+        <!-- Dashboard Tab -->
+        <div class="tab-content active" id="dashboard-tab">
+          <h2>Active Projects</h2>
+          <div class="project-grid">
+            <div class="project-card">
+              <div class="project-card-header">
+                <div class="project-priority high">High Priority</div>
+                <div class="project-menu"><i class="fa fa-ellipsis-v"></i></div>
               </div>
-              <div class="project-deadline">
-                <i class="fas fa-calendar"></i> Due: Jun 15, 2023
-              </div>
-              <div class="project-team">
-                <div class="team-members">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                  <span class="team-more">+2</span>
-                </div>
-              </div>
-            </div>
-            <div class="project-stats">
-              <div class="stat">
-                <i class="fas fa-check-circle"></i> 18/24
-              </div>
-              <div class="stat">
-                <i class="fas fa-comment"></i> 12
-              </div>
-              <div class="stat">
-                <i class="fas fa-paperclip"></i> 5
-              </div>
-            </div>
-          </div>
-          
-          <div class="project-card">
-            <div class="project-card-header">
-              <div class="project-priority medium">Medium Priority</div>
-              <div class="project-menu"><i class="fas fa-ellipsis-v"></i></div>
-            </div>
-            <h3 class="project-title">Mobile App Development</h3>
-            <div class="project-details">
-              <div class="project-completion">
-                <span class="completion-text">45% Complete</span>
-                <div class="progress-bar">
-                  <div class="progress" style="width: 45%"></div>
-                </div>
-              </div>
-              <div class="project-deadline">
-                <i class="fas fa-calendar"></i> Due: Jul 30, 2023
-              </div>
-              <div class="project-team">
-                <div class="team-members">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                </div>
-              </div>
-            </div>
-            <div class="project-stats">
-              <div class="stat">
-                <i class="fas fa-check-circle"></i> 24/53
-              </div>
-              <div class="stat">
-                <i class="fas fa-comment"></i> 28
-              </div>
-              <div class="stat">
-                <i class="fas fa-paperclip"></i> 12
-              </div>
-            </div>
-          </div>
-          
-          <div class="project-card">
-            <div class="project-card-header">
-              <div class="project-priority high">High Priority</div>
-              <div class="project-menu"><i class="fas fa-ellipsis-v"></i></div>
-            </div>
-            <h3 class="project-title">CRM Integration</h3>
-            <div class="project-details">
-              <div class="project-completion">
-                <span class="completion-text">30% Complete</span>
-                <div class="progress-bar">
-                  <div class="progress" style="width: 30%"></div>
-                </div>
-              </div>
-              <div class="project-deadline">
-                <i class="fas fa-calendar"></i> Due: Jun 25, 2023
-              </div>
-              <div class="project-team">
-                <div class="team-members">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                  <span class="team-more">+1</span>
-                </div>
-              </div>
-            </div>
-            <div class="project-stats">
-              <div class="stat">
-                <i class="fas fa-check-circle"></i> 12/40
-              </div>
-              <div class="stat">
-                <i class="fas fa-comment"></i> 15
-              </div>
-              <div class="stat">
-                <i class="fas fa-paperclip"></i> 8
-              </div>
-            </div>
-          </div>
-          
-          <div class="project-card">
-            <div class="project-card-header">
-              <div class="project-priority low">Low Priority</div>
-              <div class="project-menu"><i class="fas fa-ellipsis-v"></i></div>
-            </div>
-            <h3 class="project-title">Content Strategy</h3>
-            <div class="project-details">
-              <div class="project-completion">
-                <span class="completion-text">85% Complete</span>
-                <div class="progress-bar">
-                  <div class="progress" style="width: 85%"></div>
-                </div>
-              </div>
-              <div class="project-deadline">
-                <i class="fas fa-calendar"></i> Due: Jun 10, 2023
-              </div>
-              <div class="project-team">
-                <div class="team-members">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                  <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-                </div>
-              </div>
-            </div>
-            <div class="project-stats">
-              <div class="stat">
-                <i class="fas fa-check-circle"></i> 17/20
-              </div>
-              <div class="stat">
-                <i class="fas fa-comment"></i> 7
-              </div>
-              <div class="stat">
-                <i class="fas fa-paperclip"></i> 3
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <h2>Upcoming Deadlines</h2>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Project</th>
-                <th>Status</th>
-                <th>Team Lead</th>
-                <th>Deadline</th>
-                <th>Progress</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="project-cell">
-                  <div class="project-info">
-                    <span class="project-name">Website Redesign</span>
-                    <span class="project-client">Acme Corp</span>
-                  </div>
-                </td>
-                <td><span class="status-in-progress">In Progress</span></td>
-                <td>Jane Smith</td>
-                <td>Jun 15, 2023</td>
-                <td>
+              <h3 class="project-title">Website Redesign</h3>
+              <div class="project-details">
+                <div class="project-completion">
+                  <span class="completion-text">75% Complete</span>
                   <div class="progress-bar">
                     <div class="progress" style="width: 75%"></div>
                   </div>
-                </td>
-                <td>
-                  <div class="actions">
-                    <button class="btn-icon"><i class="fas fa-eye"></i></button>
-                    <button class="btn-icon"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon"><i class="fas fa-share-alt"></i></button>
+                </div>
+                <div class="project-deadline">
+                  <i class="fa fa-calendar"></i> Due: Jun 15, 2023
+                </div>
+                <div class="project-team">
+                  <div class="team-members">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+                    <span class="team-more">+2</span>
                   </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="project-cell">
-                  <div class="project-info">
-                    <span class="project-name">CRM Integration</span>
-                    <span class="project-client">TechNova</span>
-                  </div>
-                </td>
-                <td><span class="status-at-risk">At Risk</span></td>
-                <td>Mike Johnson</td>
-                <td>Jun 25, 2023</td>
-                <td>
+                </div>
+              </div>
+              <div class="project-stats">
+                <div class="stat">
+                  <i class="fa fa-check-circle"></i> 18/24
+                </div>
+                <div class="stat">
+                  <i class="fa fa-comment"></i> 12
+                </div>
+                <div class="stat">
+                  <i class="fa fa-paperclip"></i> 5
+                </div>
+              </div>
+            </div>
+            
+            <div class="project-card">
+              <div class="project-card-header">
+                <div class="project-priority medium">Medium Priority</div>
+                <div class="project-menu"><i class="fa fa-ellipsis-v"></i></div>
+              </div>
+              <h3 class="project-title">Mobile App Development</h3>
+              <div class="project-details">
+                <div class="project-completion">
+                  <span class="completion-text">45% Complete</span>
                   <div class="progress-bar">
-                    <div class="progress progress-warning" style="width: 30%"></div>
+                    <div class="progress" style="width: 45%"></div>
                   </div>
-                </td>
-                <td>
-                  <div class="actions">
-                    <button class="btn-icon"><i class="fas fa-eye"></i></button>
-                    <button class="btn-icon"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon"><i class="fas fa-share-alt"></i></button>
+                </div>
+                <div class="project-deadline">
+                  <i class="fa fa-calendar"></i> Due: Jul 30, 2023
+                </div>
+                <div class="project-team">
+                  <div class="team-members">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
                   </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="project-cell">
-                  <div class="project-info">
-                    <span class="project-name">Content Strategy</span>
-                    <span class="project-client">GlobeCorp</span>
+                </div>
+              </div>
+              <div class="project-stats">
+                <div class="stat">
+                  <i class="fa fa-check-circle"></i> 24/53
+                </div>
+                <div class="stat">
+                  <i class="fa fa-comment"></i> 28
+                </div>
+                <div class="stat">
+                  <i class="fa fa-paperclip"></i> 12
+                </div>
+              </div>
+            </div>
+            
+            <div class="project-card">
+              <div class="project-card-header">
+                <div class="project-priority high">High Priority</div>
+                <div class="project-menu"><i class="fa fa-ellipsis-v"></i></div>
+              </div>
+              <h3 class="project-title">CRM Integration</h3>
+              <div class="project-details">
+                <div class="project-completion">
+                  <span class="completion-text">30% Complete</span>
+                  <div class="progress-bar">
+                    <div class="progress" style="width: 30%"></div>
                   </div>
-                </td>
-                <td><span class="status-in-progress">In Progress</span></td>
-                <td>Sarah Williams</td>
-                <td>Jun 10, 2023</td>
-                <td>
+                </div>
+                <div class="project-deadline">
+                  <i class="fa fa-calendar"></i> Due: Jun 25, 2023
+                </div>
+                <div class="project-team">
+                  <div class="team-members">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+                    <span class="team-more">+1</span>
+                  </div>
+                </div>
+              </div>
+              <div class="project-stats">
+                <div class="stat">
+                  <i class="fa fa-check-circle"></i> 12/40
+                </div>
+                <div class="stat">
+                  <i class="fa fa-comment"></i> 15
+                </div>
+                <div class="stat">
+                  <i class="fa fa-paperclip"></i> 8
+                </div>
+              </div>
+            </div>
+            
+            <div class="project-card">
+              <div class="project-card-header">
+                <div class="project-priority low">Low Priority</div>
+                <div class="project-menu"><i class="fa fa-ellipsis-v"></i></div>
+              </div>
+              <h3 class="project-title">Content Strategy</h3>
+              <div class="project-details">
+                <div class="project-completion">
+                  <span class="completion-text">85% Complete</span>
                   <div class="progress-bar">
                     <div class="progress" style="width: 85%"></div>
                   </div>
-                </td>
-                <td>
-                  <div class="actions">
-                    <button class="btn-icon"><i class="fas fa-eye"></i></button>
-                    <button class="btn-icon"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon"><i class="fas fa-share-alt"></i></button>
+                </div>
+                <div class="project-deadline">
+                  <i class="fa fa-calendar"></i> Due: Jun 10, 2023
+                </div>
+                <div class="project-team">
+                  <div class="team-members">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+                    <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+              <div class="project-stats">
+                <div class="stat">
+                  <i class="fa fa-check-circle"></i> 17/20
+                </div>
+                <div class="stat">
+                  <i class="fa fa-comment"></i> 7
+                </div>
+                <div class="stat">
+                  <i class="fa fa-paperclip"></i> 3
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <h2>Upcoming Deadlines</h2>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th>Status</th>
+                  <th>Team Lead</th>
+                  <th>Deadline</th>
+                  <th>Progress</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="project-cell">
+                    <div class="project-info">
+                      <span class="project-name">Website Redesign</span>
+                      <span class="project-client">Acme Corp</span>
+                    </div>
+                  </td>
+                  <td><span class="status-in-progress">In Progress</span></td>
+                  <td>Jane Smith</td>
+                  <td>Jun 15, 2023</td>
+                  <td>
+                    <div class="progress-bar">
+                      <div class="progress" style="width: 75%"></div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="actions">
+                      <button class="btn-icon"><i class="fa fa-eye"></i></button>
+                      <button class="btn-icon"><i class="fa fa-edit"></i></button>
+                      <button class="btn-icon"><i class="fa fa-share-alt"></i></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="project-cell">
+                    <div class="project-info">
+                      <span class="project-name">CRM Integration</span>
+                      <span class="project-client">TechNova</span>
+                    </div>
+                  </td>
+                  <td><span class="status-at-risk">At Risk</span></td>
+                  <td>Mike Johnson</td>
+                  <td>Jun 25, 2023</td>
+                  <td>
+                    <div class="progress-bar">
+                      <div class="progress progress-warning" style="width: 30%"></div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="actions">
+                      <button class="btn-icon"><i class="fa fa-eye"></i></button>
+                      <button class="btn-icon"><i class="fa fa-edit"></i></button>
+                      <button class="btn-icon"><i class="fa fa-share-alt"></i></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="project-cell">
+                    <div class="project-info">
+                      <span class="project-name">Content Strategy</span>
+                      <span class="project-client">GlobeCorp</span>
+                    </div>
+                  </td>
+                  <td><span class="status-in-progress">In Progress</span></td>
+                  <td>Sarah Williams</td>
+                  <td>Jun 10, 2023</td>
+                  <td>
+                    <div class="progress-bar">
+                      <div class="progress" style="width: 85%"></div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="actions">
+                      <button class="btn-icon"><i class="fa fa-eye"></i></button>
+                      <button class="btn-icon"><i class="fa fa-edit"></i></button>
+                      <button class="btn-icon"><i class="fa fa-share-alt"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Products Tab -->
+        <div class="tab-content" id="products-tab">
+          <div class="products-header">
+            <div id="db-path-container"></div>
+            
+            <div class="product-controls">
+              <button id="select-db-path" class="button button-primary"><i class="fa fa-folder-open"></i> Open Products Database</button>
+              
+              <div class="products-actions">
+                <div class="search-container">
+                  <input type="text" id="product-search" placeholder="Search products...">
+                  <i class="fa fa-search"></i>
+                </div>
+                <div class="filter-container">
+                  <select id="category-filter">
+                    <option value="">All Categories</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="table-container">
+            <table id="products-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="products-table-body">
+                <!-- Products will be loaded here dynamically -->
+                <tr class="empty-row">
+                  <td colspan="7">
+                    <div class="empty-state">
+                      <i class="fa fa-cubes"></i>
+                      <p>No products found. Please select a database folder.</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination -->
+          <div class="pagination">
+            <button id="prev-page" class="pagination-btn" disabled><i class="fa fa-chevron-left"></i> Previous</button>
+            <span id="page-info">Page 1 of 1</span>
+            <button id="next-page" class="pagination-btn" disabled>Next <i class="fa fa-chevron-right"></i></button>
+          </div>
         </div>
       </section>
     </main>

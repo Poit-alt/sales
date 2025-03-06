@@ -1,0 +1,55 @@
+{
+  "name": "sales",
+  "version": "1.0.0",
+  "description": "Electron sales app with dark mode",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "electron-builder",
+    "lint": "eslint .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "sales",
+    "dashboard",
+    "dark-mode"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
+    "font-awesome": "^4.7.0"
+  },
+  "build": {
+    "appId": "com.example.sales",
+    "productName": "Sales Dashboard",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.business"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office"
+    }
+  }
+}

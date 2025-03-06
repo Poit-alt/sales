@@ -1,0 +1,27 @@
+// Preload script that will be loaded in the renderer process
+// This is where we can safely expose Node.js functionality to the renderer
+
+const { contextBridge, ipcRenderer } = require('electron');
+
+// Expose protected methods that allow the renderer process to use
+// specific electron APIs without exposing the entire API
+contextBridge.exposeInMainWorld('electron', {
+  // Example: expose a function to communicate with the main process
+  sendToMain: (channel, data) => {
+    // whitelist channels for security
+    const validChannels = ['toMain', 'getData', 'saveData', 'window-control'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.send(channel, data);
+    }
+  },
+  receiveFromMain: (channel, func) => {
+    const validChannels = ['fromMain', 'dataResult', 'error', 'window-state-change'];
+    if (validChannels.includes(channel)) {
+      // Deliberately strip event as it includes `sender` 
+      ipcRenderer.on(channel, (event, ...args) => func(...args));
+    }
+  },
+  // Platform info
+  platform: process.platform,
+  // Add other APIs as needed
+});

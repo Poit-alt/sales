@@ -1,0 +1,640 @@
+/* Modern styles for the Project Management App with dark mode support */
+
+:root {
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --text-primary: #212529;
+  --text-secondary: #495057;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --border: #e5e7eb;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --accent-rgb: 79, 70, 229;
+  --status-completed: #10b981;
+  --status-pending: #f59e0b;
+  --status-cancelled: #ef4444;
+  --status-in-progress: #3b82f6;
+  --status-at-risk: #f97316;
+  --priority-high: #ef4444;
+  --priority-medium: #f59e0b;
+  --priority-low: #3b82f6;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --border: #374151;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --accent-rgb: 99, 102, 241;
+  --status-completed: #34d399;
+  --status-pending: #fbbf24;
+  --status-cancelled: #f87171;
+  --status-in-progress: #60a5fa;
+  --status-at-risk: #fb923c;
+  --priority-high: #f87171;
+  --priority-medium: #fbbf24;
+  --priority-low: #60a5fa;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
+  line-height: 1.6;
+}
+
+header {
+  background-color: var(--bg-secondary);
+  padding: 0 1.5rem 0 0;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 4px var(--shadow);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 64px;
+  -webkit-app-region: drag; /* Makes the header a draggable region */
+  position: relative;
+}
+
+/* Title is centered on macOS, but left-aligned on Windows/Linux */
+body.platform-darwin .logo {
+  margin: 0 auto;
+}
+
+body.platform-win .logo,
+body.platform-linux .logo {
+  margin-left: 16px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-right: 8px; /* Add some spacing from the edge */
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  -webkit-app-region: no-drag; /* Prevent interaction problems with draggable header */
+}
+
+.btn-icon:hover {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+}
+
+/* User profile has been removed */
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--accent);
+  -webkit-app-region: drag; /* Make sure logo is still draggable */
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+  -webkit-app-region: no-drag; /* Prevent interaction problems with draggable header */
+  position: relative;
+}
+
+/* Show/hide moon and sun icons based on theme */
+.theme-toggle .fa-moon-o {
+  display: none;
+}
+
+.theme-toggle .fa-sun-o {
+  display: block;
+}
+
+html[data-theme="light"] .theme-toggle .fa-moon-o {
+  display: block;
+}
+
+html[data-theme="light"] .theme-toggle .fa-sun-o {
+  display: none;
+}
+
+.theme-toggle:hover {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+}
+
+main {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: calc(100vh - 60px);
+}
+
+.sidebar {
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem 1rem;
+}
+
+.sidebar-nav {
+  list-style: none;
+}
+
+.sidebar-nav li {
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-nav li.divider {
+  height: 1px;
+  background-color: var(--border);
+  margin: 1rem 0;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-nav a:hover, .sidebar-nav a.active {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+}
+
+.sidebar-nav a i {
+  margin-right: 0.75rem;
+  font-size: 1.2rem;
+}
+
+.content {
+  padding: 2rem;
+}
+
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.content-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.projects-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.summary-card.active::before {
+  background-color: var(--accent);
+}
+
+.summary-card.upcoming::before {
+  background-color: var(--status-pending);
+}
+
+.summary-card.completed::before {
+  background-color: var(--success);
+}
+
+.summary-card.overdue::before {
+  background-color: var(--danger);
+}
+
+.summary-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+}
+
+.summary-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.project-card {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.project-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.project-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.project-priority {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.project-priority.high {
+  background-color: rgba(var(--danger), 0.1);
+  color: var(--priority-high);
+}
+
+.project-priority.medium {
+  background-color: rgba(var(--warning), 0.1);
+  color: var(--priority-medium);
+}
+
+.project-priority.low {
+  background-color: rgba(var(--accent), 0.1);
+  color: var(--priority-low);
+}
+
+.project-menu {
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.project-menu:hover {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  color: var(--text-primary);
+}
+
+.project-title {
+  font-size: 1.1rem;
+  margin-bottom: 1.25rem;
+  color: var(--text-primary);
+}
+
+.project-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.project-completion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.completion-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.progress-bar {
+  height: 6px;
+  background-color: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background-color: var(--accent);
+}
+
+.progress-warning {
+  background-color: var(--warning);
+}
+
+.project-deadline {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.project-team {
+  display: flex;
+  align-items: center;
+}
+
+.team-members {
+  display: flex;
+  align-items: center;
+}
+
+.team-member {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
+  margin-right: -8px;
+  object-fit: cover;
+}
+
+.team-more {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.project-stats {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Project Table Styles */
+.project-cell {
+  min-width: 200px;
+}
+
+.project-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.project-client {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px var(--shadow);
+  padding: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px var(--shadow);
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.card-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.card-trend {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.trend-up {
+  color: var(--success);
+}
+
+.trend-down {
+  color: var(--danger);
+}
+
+.button {
+  display: inline-block;
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.button:hover {
+  background-color: var(--accent-hover);
+}
+
+.button-outline {
+  background-color: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.button-outline:hover {
+  background-color: rgba(var(--accent-rgb), 0.1);
+}
+
+.table-container {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px var(--shadow);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-completed, .status-pending, .status-cancelled, .status-in-progress, .status-at-risk {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-completed {
+  background-color: rgba(var(--success), 0.1);
+  color: var(--status-completed);
+}
+
+.status-pending {
+  background-color: rgba(var(--warning), 0.1);
+  color: var(--status-pending);
+}
+
+.status-cancelled {
+  background-color: rgba(var(--danger), 0.1);
+  color: var(--status-cancelled);
+}
+
+.status-in-progress {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  color: var(--status-in-progress);
+}
+
+.status-at-risk {
+  background-color: rgba(var(--warning), 0.15);
+  color: var(--status-at-risk);
+}
+
+th {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover {
+  background-color: rgba(var(--accent-rgb), 0.05);
+}
+
+@media (max-width: 1024px) {
+  .projects-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+  
+  .sidebar {
+    display: none;
+  }
+  
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+  
+  .projects-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .content-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .project-cell {
+    min-width: 160px;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+}

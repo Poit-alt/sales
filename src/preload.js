@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('electron', {
     selectPath: () => ipcRenderer.invoke('select-database-path'),
     getPath: () => ipcRenderer.invoke('get-database-path'),
     listFiles: (fileType) => ipcRenderer.invoke('list-database-files', fileType),
-    readFile: (fileName) => ipcRenderer.invoke('read-database-file', fileName)
+    readFile: (fileName) => ipcRenderer.invoke('read-database-file', fileName),
+    saveFile: (fileName, data) => ipcRenderer.invoke('save-database-file', { fileName, data })
   }
 });

@@ -639,13 +639,317 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (action === 'view') {
           console.log('View product details:', productId);
-          // Implement product detail view
+          // Show product details in a modal
+          const product = findProductById(productId);
+          if (product) {
+            showProductDetails(product);
+          }
         } else if (action === 'edit') {
           console.log('Edit product:', productId);
-          // Implement product edit
+          // Open the edit modal
+          const product = findProductById(productId);
+          if (product) {
+            openEditProductModal(product);
+          }
         }
       });
     });
+  }
+  
+  // Find a product by its ID
+  function findProductById(productId) {
+    return allProducts.find(product => product.id === productId);
+  }
+  
+  // Modal functionality
+  const productModal = document.getElementById('product-modal');
+  const modalClose = document.querySelector('.modal-close');
+  const cancelEditBtn = document.getElementById('cancel-edit');
+  const productForm = document.getElementById('product-form');
+  const addFeatureBtn = document.getElementById('add-feature');
+  const featuresContainer = document.getElementById('features-container');
+  
+  // Modal field elements
+  const productIdField = document.getElementById('product-id');
+  const productNameField = document.getElementById('product-name');
+  const productDescriptionField = document.getElementById('product-description');
+  const productPriceField = document.getElementById('product-price');
+  const productCategoryField = document.getElementById('product-category');
+  const productSubcategoryField = document.getElementById('product-subcategory');
+  const productCurrencyField = document.getElementById('product-currency');
+  const productStatusField = document.getElementById('product-status');
+  const productInStockField = document.getElementById('product-instock');
+  const productQuantityField = document.getElementById('product-quantity');
+  
+  // Variable to store the currently editing product
+  let currentEditingProduct = null;
+  
+  // Close modal when clicking close button or cancel
+  if (modalClose) {
+    modalClose.addEventListener('click', closeModal);
+  }
+  
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', closeModal);
+  }
+  
+  // Close modal when clicking outside the modal content
+  if (productModal) {
+    productModal.addEventListener('click', (e) => {
+      if (e.target === productModal) {
+        closeModal();
+      }
+    });
+  }
+  
+  // Add feature button functionality
+  if (addFeatureBtn) {
+    addFeatureBtn.addEventListener('click', () => {
+      addFeatureInput();
+    });
+  }
+  
+  // Handle form submission
+  if (productForm) {
+    productForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveProductChanges();
+    });
+  }
+  
+  // Open modal to edit a product
+  function openEditProductModal(product) {
+    if (!productModal) return;
+    
+    // Store the current product being edited
+    currentEditingProduct = product;
+    
+    // Set form title
+    const modalTitle = document.getElementById('modal-title');
+    if (modalTitle) {
+      modalTitle.textContent = `Edit Product: ${product.name}`;
+    }
+    
+    // Populate form fields
+    populateProductForm(product);
+    
+    // Show the modal
+    productModal.classList.add('active');
+  }
+  
+  // Populate the form with product data
+  function populateProductForm(product) {
+    // Basic fields
+    if (productIdField) productIdField.value = product.id || '';
+    if (productNameField) productNameField.value = product.name || '';
+    if (productDescriptionField) productDescriptionField.value = product.description || '';
+    if (productPriceField) productPriceField.value = product.price || '';
+    if (productCurrencyField) productCurrencyField.value = product.currency || 'USD';
+    if (productStatusField) productStatusField.value = product.status || 'Active';
+    
+    // Stock status
+    let inStock = true;
+    let quantity = 0;
+    
+    if (product.stockStatus) {
+      inStock = product.stockStatus.inStock !== undefined ? product.stockStatus.inStock : true;
+      quantity = product.stockStatus.quantity !== undefined ? product.stockStatus.quantity : 0;
+    }
+    
+    if (productInStockField) productInStockField.checked = inStock;
+    if (productQuantityField) productQuantityField.value = quantity;
+    
+    // Categories
+    populateCategoryDropdowns(product.category, product.subCategory);
+    
+    // Features
+    populateFeatures(product.features || []);
+  }
+  
+  // Populate category dropdowns
+  function populateCategoryDropdowns(selectedCategory, selectedSubcategory) {
+    if (!productCategoryField || !productSubcategoryField) return;
+    
+    // Clear existing options
+    productCategoryField.innerHTML = '';
+    productSubcategoryField.innerHTML = '<option value="">None</option>';
+    
+    // Get unique categories and subcategories
+    const mainCategories = new Set();
+    const subcategories = new Set();
+    
+    // Build categories from our data structure
+    allProducts.forEach(product => {
+      if (product.category) {
+        mainCategories.add(product.category);
+      }
+      if (product.subCategory) {
+        subcategories.add(product.subCategory);
+      }
+    });
+    
+    // Add main categories
+    const sortedCategories = Array.from(mainCategories).sort();
+    sortedCategories.forEach(category => {
+      const option = document.createElement('option');
+      option.value = category;
+      option.textContent = category;
+      option.selected = category === selectedCategory;
+      productCategoryField.appendChild(option);
+    });
+    
+    // Add subcategories
+    const sortedSubcategories = Array.from(subcategories).sort();
+    sortedSubcategories.forEach(subcategory => {
+      const option = document.createElement('option');
+      option.value = subcategory;
+      option.textContent = subcategory;
+      option.selected = subcategory === selectedSubcategory;
+      productSubcategoryField.appendChild(option);
+    });
+  }
+  
+  // Populate features
+  function populateFeatures(features) {
+    if (!featuresContainer) return;
+    
+    // Clear existing features
+    featuresContainer.innerHTML = '';
+    
+    // Add each feature
+    if (features && features.length > 0) {
+      features.forEach(feature => {
+        addFeatureInput(feature);
+      });
+    }
+  }
+  
+  // Add a feature input field
+  function addFeatureInput(value = '') {
+    if (!featuresContainer) return;
+    
+    const featureGroup = document.createElement('div');
+    featureGroup.className = 'feature-input-group';
+    
+    featureGroup.innerHTML = `
+      <input type="text" class="feature-input" value="${value}" placeholder="Enter feature">
+      <button type="button" class="feature-remove-btn"><i class="fa fa-times"></i></button>
+    `;
+    
+    // Add remove button functionality
+    const removeBtn = featureGroup.querySelector('.feature-remove-btn');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        featureGroup.remove();
+      });
+    }
+    
+    featuresContainer.appendChild(featureGroup);
+  }
+  
+  // Save product changes
+  async function saveProductChanges() {
+    if (!currentEditingProduct) return;
+    
+    // Get form values
+    const updatedProduct = {
+      ...currentEditingProduct,
+      name: productNameField ? productNameField.value : currentEditingProduct.name,
+      description: productDescriptionField ? productDescriptionField.value : currentEditingProduct.description,
+      price: productPriceField ? parseFloat(productPriceField.value) : currentEditingProduct.price,
+      category: productCategoryField ? productCategoryField.value : currentEditingProduct.category,
+      subCategory: productSubcategoryField && productSubcategoryField.value ? productSubcategoryField.value : currentEditingProduct.subCategory,
+      currency: productCurrencyField ? productCurrencyField.value : currentEditingProduct.currency,
+      status: productStatusField ? productStatusField.value : currentEditingProduct.status,
+    };
+    
+    // Update stock status
+    updatedProduct.stockStatus = {
+      ...(currentEditingProduct.stockStatus || {}),
+      inStock: productInStockField ? productInStockField.checked : true,
+      quantity: productQuantityField ? parseInt(productQuantityField.value, 10) : 0
+    };
+    
+    // Update features
+    if (featuresContainer) {
+      const featureInputs = featuresContainer.querySelectorAll('.feature-input');
+      updatedProduct.features = Array.from(featureInputs)
+        .map(input => input.value.trim())
+        .filter(value => value !== '');
+    }
+    
+    // Update product in the allProducts array
+    const productIndex = allProducts.findIndex(p => p.id === updatedProduct.id);
+    if (productIndex !== -1) {
+      allProducts[productIndex] = updatedProduct;
+      
+      // Update the UI
+      applyFilters();
+      
+      // Save to the products.json file
+      if (window.electron && window.electron.database) {
+        try {
+          // First read the current file to get the whole structure
+          const result = await window.electron.database.readFile('products.json');
+          
+          if (!result.error && result.data) {
+            // Update the product in the data
+            const productsData = result.data;
+            
+            // Find and update the product in the array
+            const fileProductIndex = productsData.products.findIndex(p => p.id === updatedProduct.id);
+            if (fileProductIndex !== -1) {
+              productsData.products[fileProductIndex] = updatedProduct;
+              
+              // Save the updated data back to the file
+              const saveResult = await window.electron.database.saveFile('products.json', productsData);
+              
+              if (saveResult.success) {
+                console.log('Product saved to file successfully');
+              } else {
+                console.error('Failed to save product to file:', saveResult.error);
+                alert('Warning: Product was updated in memory but failed to save to file: ' + saveResult.error);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error saving product:', err);
+          alert('Warning: Product was updated in memory but failed to save to file');
+        }
+      }
+      
+      // Show success message
+      console.log('Product updated successfully:', updatedProduct);
+      alert('Product updated successfully!');
+      
+      // Close the modal
+      closeModal();
+    }
+  }
+  
+  // Show product details
+  function showProductDetails(product) {
+    // In a real app, you might show a detailed view
+    // For now, just alert with some basic info
+    const details = `
+      ID: ${product.id}
+      Name: ${product.name}
+      Category: ${product.category}${product.subCategory ? ' / ' + product.subCategory : ''}
+      Price: ${formatPrice(product.price, product.currency)}
+      Status: ${product.status || 'Active'}
+    `;
+    
+    alert(details);
+  }
+  
+  // Close the modal
+  function closeModal() {
+    if (productModal) {
+      productModal.classList.remove('active');
+    }
+    
+    // Reset the current editing product
+    currentEditingProduct = null;
   }
   
   // Set up event listeners for search and filter

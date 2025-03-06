@@ -208,6 +208,18 @@ ipcMain.handle('list-database-files', async (event, fileType) => {
 });
 
 ipcMain.handle('read-database-file', async (event, fileName) => {
+  // Special case for accessing local data directory
+  if (fileName === 'products.json' && !app.databasePath) {
+    try {
+      // Try to read from the app's data directory
+      const dataPath = path.join(__dirname, '..', 'data', 'products.json');
+      const data = await fs.promises.readFile(dataPath, 'utf8');
+      return { data: JSON.parse(data) };
+    } catch (err) {
+      console.error('Error reading local products.json:', err);
+    }
+  }
+
   if (!app.databasePath) {
     const settings = loadSettings();
     if (settings && settings.databasePath) {
@@ -221,6 +233,39 @@ ipcMain.handle('read-database-file', async (event, fileName) => {
     const filePath = path.join(app.databasePath, fileName);
     const data = await fs.promises.readFile(filePath, 'utf8');
     return { data: JSON.parse(data) };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+// New handler to save data to a file
+ipcMain.handle('save-database-file', async (event, { fileName, data }) => {
+  // Special case for saving to local data directory
+  if (fileName === 'products.json' && !app.databasePath) {
+    try {
+      // Try to save to the app's data directory
+      const dataPath = path.join(__dirname, '..', 'data', 'products.json');
+      await fs.promises.writeFile(dataPath, JSON.stringify(data, null, 2), 'utf8');
+      return { success: true };
+    } catch (err) {
+      console.error('Error saving local products.json:', err);
+      return { error: err.message };
+    }
+  }
+
+  if (!app.databasePath) {
+    const settings = loadSettings();
+    if (settings && settings.databasePath) {
+      app.databasePath = settings.databasePath;
+    } else {
+      return { error: 'No database path set' };
+    }
+  }
+  
+  try {
+    const filePath = path.join(app.databasePath, fileName);
+    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+    return { success: true };
   } catch (err) {
     return { error: err.message };
   }

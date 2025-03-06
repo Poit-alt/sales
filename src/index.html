@@ -371,6 +371,108 @@
       </section>
     </main>
     
+    <!-- Product Edit Modal -->
+    <div id="product-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">Edit Product</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="product-form">
+            <div class="form-group">
+              <label for="product-id">Product ID</label>
+              <input type="text" id="product-id" readonly>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="product-name">Name</label>
+                <input type="text" id="product-name" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="product-price">Price</label>
+                <input type="number" id="product-price" min="0" step="0.01" required>
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="product-category">Category</label>
+                <select id="product-category" required>
+                  <!-- Categories will be loaded dynamically -->
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="product-subcategory">Subcategory</label>
+                <select id="product-subcategory">
+                  <option value="">None</option>
+                  <!-- Subcategories will be loaded dynamically -->
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="product-description">Description</label>
+              <textarea id="product-description" rows="3"></textarea>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="product-currency">Currency</label>
+                <select id="product-currency">
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="NOK">NOK (kr)</option>
+                  <option value="SEK">SEK (kr)</option>
+                  <option value="DKK">DKK (kr)</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="product-status">Status</label>
+                <select id="product-status">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Out of Stock">Out of Stock</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="product-instock">In Stock</label>
+                <input type="checkbox" id="product-instock">
+              </div>
+              
+              <div class="form-group">
+                <label for="product-quantity">Quantity</label>
+                <input type="number" id="product-quantity" min="0" step="1">
+              </div>
+            </div>
+            
+            <div class="form-row features-section">
+              <div class="form-group full-width">
+                <label>Features</label>
+                <div id="features-container">
+                  <!-- Feature inputs will be added here dynamically -->
+                </div>
+                <button type="button" id="add-feature" class="button button-outline"><i class="fa fa-plus"></i> Add Feature</button>
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button type="button" id="cancel-edit" class="button button-outline">Cancel</button>
+              <button type="submit" id="save-product" class="button">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
     <script src="renderer.js"></script>
   </body>
 </html>

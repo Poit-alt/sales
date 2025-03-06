@@ -1352,13 +1352,131 @@ tr:hover {
   flex: 1;
 }
 
-.feature-remove-btn {
+.feature-remove-btn,
+.bundle-item-remove-btn {
   background: none;
   border: none;
   color: var(--danger);
   cursor: pointer;
   font-size: 1.2rem;
   padding: 0.25rem;
+}
+
+.bundle-item-container {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: rgba(var(--accent-rgb), 0.05);
+}
+
+.bundle-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.bundle-item-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bundle-item-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.bundle-item-detail {
+  flex-basis: calc(50% - 0.5rem);
+}
+
+.bundle-item-detail label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.bundle-item-selector {
+  width: 100%;
+}
+
+.bundle-fields {
+  background-color: rgba(var(--accent-rgb), 0.03);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px dashed var(--border);
+}
+
+.bundle-items-section {
+  margin-top: 1rem;
+}
+
+.bundle-price-info {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--success);
+}
+
+.bundle-item-preview {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-primary);
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+.bundle-item-preview-img {
+  width: 32px;
+  height: 32px;
+  margin-right: 0.75rem;
+  background-color: var(--bg-secondary);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bundle-item-preview-img i {
+  color: var(--accent);
+}
+
+.bundle-item-preview-info {
+  flex: 1;
+}
+
+.bundle-item-preview-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.bundle-item-preview-price {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Bundle indicator in product table */
+.bundle-indicator {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background-color: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+  margin-top: 0.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Price savings display */
+.price-savings {
+  font-size: 0.75rem;
+  color: var(--success);
+  margin-top: 0.25rem;
 }
 
 /* Responsive modal adjustments */

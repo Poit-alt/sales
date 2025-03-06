@@ -51,9 +51,42 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
+  console.log('Electron app ready, creating window and setting up IPC...');
+  
+  // Always set a default database path to the app's data directory
+  // This ensures we have a consistent location for saving and loading
+  const dataDir = path.join(__dirname, '..', 'data');
+  app.databasePath = dataDir;
+  console.log('Setting default databasePath to:', app.databasePath);
+  
+  // Check if FORCE_LOCAL_STORAGE file exists
+  const forceLocalPath = path.join(__dirname, '..', 'FORCE_LOCAL_STORAGE');
+  if (fs.existsSync(forceLocalPath)) {
+    console.log('FORCE_LOCAL_STORAGE file detected - will always use local data directory');
+    // Save this setting to ensure it persists
+    saveSettings({ databasePath: dataDir, forceLocalStorage: true });
+  }
+  
+  // Check if products.json exists in the data directory
+  const productsPath = path.join(dataDir, 'products.json');
+  
+  console.log('Checking for products.json at:', productsPath);
+  if (fs.existsSync(productsPath)) {
+    console.log('products.json found in data directory');
+    try {
+      const stats = fs.statSync(productsPath);
+      console.log('File size:', stats.size, 'bytes');
+      console.log('Last modified:', stats.mtime);
+    } catch (err) {
+      console.error('Error getting file stats:', err);
+    }
+  } else {
+    console.log('products.json NOT found in data directory');
+  }
+  
   createWindow();
   
-    // Set up IPC communication
+  // Set up IPC communication
   setupIPC();
   
   // Create the application menu
@@ -62,6 +95,7 @@ app.whenReady().then(() => {
 
 // Setup IPC communication between main and renderer processes
 function setupIPC() {
+  console.log('Setting up IPC handlers...');
   // Example IPC handler for data requests
   ipcMain.on('getData', (event, args) => {
     // Here you would fetch data from database or files
@@ -140,136 +174,252 @@ function setupIPC() {
     event.reply('fromMain', { success: true, message: 'Project data saved successfully' });
   });
   
-  // Database path handlers
-ipcMain.handle('select-database-path', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
-    properties: ['openDirectory'],
-    title: 'Select Database Directory',
-    buttonLabel: 'Select Folder'
+  // Save handler for products.json
+  ipcMain.on('save-products', (event, productsData) => {
+    try {
+      console.log('Save products request received');
+      
+      // ALWAYS use the app's data directory first
+      const defaultSavePath = path.join(__dirname, '..', 'data', 'products.json');
+      let savePath = defaultSavePath;
+      
+      console.log('HARDCODED: Using app data directory for saving:', savePath);
+      
+      // Ensure the directory exists
+      const saveDir = path.dirname(savePath);
+      if (!fs.existsSync(saveDir)) {
+        fs.mkdirSync(saveDir, { recursive: true });
+      }
+      
+      // Save the file
+      fs.writeFileSync(savePath, JSON.stringify(productsData, null, 2), 'utf8');
+      console.log('Products saved successfully to:', savePath);
+      
+      // Make sure we also copy this file to sample-products.json if it exists
+      try {
+        const samplePath = path.join(__dirname, '..', 'sample-products.json');
+        if (fs.existsSync(samplePath)) {
+          console.log('Copying updated products to sample-products.json');
+          fs.copyFileSync(savePath, samplePath);
+        }
+      } catch (copyErr) {
+        console.error('Error copying to sample-products.json:', copyErr);
+      }
+      
+      // Send success response back
+      event.reply('save-products-result', { 
+        success: true,
+        path: savePath
+      });
+    } catch (err) {
+      console.error('Error saving products:', err);
+      event.reply('save-products-result', { 
+        success: false, 
+        error: err.message 
+      });
+    }
   });
   
-  if (canceled) {
-    return null;
-  }
-  
-  // Store the selected path in app settings
-  const dbPath = filePaths[0];
-  app.databasePath = dbPath;
-  
-  // Save the path to user preferences
-  saveSettings({ databasePath: dbPath });
-  
-  return dbPath;
-});
-
-ipcMain.handle('get-database-path', () => {
-  // If we already have it in memory
-  if (app.databasePath) {
-    return app.databasePath;
-  }
-  
-  // Otherwise try to load from saved settings
-  const settings = loadSettings();
-  if (settings && settings.databasePath) {
-    app.databasePath = settings.databasePath;
-    return settings.databasePath;
-  }
-  
-  return null;
-});
-
-ipcMain.handle('list-database-files', async (event, fileType) => {
-  if (!app.databasePath) {
-    const settings = loadSettings();
-    if (settings && settings.databasePath) {
-      app.databasePath = settings.databasePath;
-    } else {
-      return { error: 'No database path set' };
-    }
-  }
-  
-  try {
-    const files = await fs.promises.readdir(app.databasePath);
-    // Filter for JSON files or specific file types
-    const jsonFiles = files.filter(file => {
-      if (fileType) {
-        return file.endsWith('.json') && file.includes(fileType);
-      }
-      return file.endsWith('.json');
+  // Database path handlers
+  ipcMain.handle('select-database-path', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: 'Select Database Directory',
+      buttonLabel: 'Select Folder'
     });
     
-    return {
-      path: app.databasePath,
-      files: jsonFiles
-    };
-  } catch (err) {
-    return { error: err.message };
-  }
-});
-
-ipcMain.handle('read-database-file', async (event, fileName) => {
-  // Special case for accessing local data directory
-  if (fileName === 'products.json' && !app.databasePath) {
-    try {
-      // Try to read from the app's data directory
-      const dataPath = path.join(__dirname, '..', 'data', 'products.json');
-      const data = await fs.promises.readFile(dataPath, 'utf8');
-      return { data: JSON.parse(data) };
-    } catch (err) {
-      console.error('Error reading local products.json:', err);
+    if (canceled) {
+      return null;
     }
-  }
-
-  if (!app.databasePath) {
+    
+    // Store the selected path in app settings
+    const dbPath = filePaths[0];
+    app.databasePath = dbPath;
+    
+    // Save the path to user preferences
+    saveSettings({ databasePath: dbPath });
+    
+    return dbPath;
+  });
+  
+  ipcMain.handle('get-database-path', () => {
+    // If we already have it in memory
+    if (app.databasePath) {
+      console.log('Returning database path from memory:', app.databasePath);
+      return app.databasePath;
+    }
+    
+    // Otherwise try to load from saved settings
     const settings = loadSettings();
     if (settings && settings.databasePath) {
       app.databasePath = settings.databasePath;
-    } else {
-      return { error: 'No database path set' };
+      console.log('Returning database path from settings:', app.databasePath);
+      return settings.databasePath;
     }
-  }
+    
+    // Last resort - use the app's data directory
+    const dataDir = path.join(__dirname, '..', 'data');
+    app.databasePath = dataDir;
+    console.log('No database path found, defaulting to:', app.databasePath);
+    return app.databasePath;
+  });
   
-  try {
-    const filePath = path.join(app.databasePath, fileName);
-    const data = await fs.promises.readFile(filePath, 'utf8');
-    return { data: JSON.parse(data) };
-  } catch (err) {
-    return { error: err.message };
-  }
-});
-
-// New handler to save data to a file
-ipcMain.handle('save-database-file', async (event, { fileName, data }) => {
-  // Special case for saving to local data directory
-  if (fileName === 'products.json' && !app.databasePath) {
+  ipcMain.handle('list-database-files', async (event, fileType) => {
+    if (!app.databasePath) {
+      const settings = loadSettings();
+      if (settings && settings.databasePath) {
+        app.databasePath = settings.databasePath;
+      } else {
+        return { error: 'No database path set' };
+      }
+    }
+    
     try {
-      // Try to save to the app's data directory
-      const dataPath = path.join(__dirname, '..', 'data', 'products.json');
-      await fs.promises.writeFile(dataPath, JSON.stringify(data, null, 2), 'utf8');
-      return { success: true };
+      const files = await fs.promises.readdir(app.databasePath);
+      // Filter for JSON files or specific file types
+      const jsonFiles = files.filter(file => {
+        if (fileType) {
+          return file.endsWith('.json') && file.includes(fileType);
+        }
+        return file.endsWith('.json');
+      });
+      
+      return {
+        path: app.databasePath,
+        files: jsonFiles
+      };
     } catch (err) {
-      console.error('Error saving local products.json:', err);
       return { error: err.message };
     }
-  }
-
-  if (!app.databasePath) {
-    const settings = loadSettings();
-    if (settings && settings.databasePath) {
-      app.databasePath = settings.databasePath;
-    } else {
-      return { error: 'No database path set' };
-    }
-  }
+  });
   
-  try {
-    const filePath = path.join(app.databasePath, fileName);
-    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
-    return { success: true };
-  } catch (err) {
-    return { error: err.message };
-  }
-});
+  ipcMain.handle('read-database-file', async (event, fileName) => {
+    console.log(`Reading database file: ${fileName}`);
+    
+    // Always check the data directory for products.json first, regardless of other settings
+    try {
+      const dataPath = path.join(__dirname, '..', 'data', fileName);
+      console.log(`First checking for ${fileName} in app data directory: ${dataPath}`);
+      
+      if (fs.existsSync(dataPath)) {
+        const data = await fs.promises.readFile(dataPath, 'utf8');
+        const stats = fs.statSync(dataPath);
+        console.log(`Successfully read ${fileName} from app data directory: ${dataPath}`);
+        console.log(`File size: ${stats.size} bytes, Last modified: ${stats.mtime}`);
+        return { data: JSON.parse(data) };
+      } else {
+        console.log(`${fileName} not found in app data directory`);
+      }
+    } catch (err) {
+      console.error(`Error reading ${fileName} from app data directory:`, err);
+    }
+  
+    if (!app.databasePath) {
+      const settings = loadSettings();
+      if (settings && settings.databasePath) {
+        app.databasePath = settings.databasePath;
+        console.log(`Set app.databasePath from settings: ${app.databasePath}`);
+      } else {
+        console.log('No database path in settings, trying local data directory as a last resort');
+        
+        // Try local data directory as a last resort
+        try {
+          const dataPath = path.join(__dirname, '..', 'data', 'products.json');
+          if (fs.existsSync(dataPath)) {
+            const data = await fs.promises.readFile(dataPath, 'utf8');
+            console.log(`Successfully read products.json from fallback path: ${dataPath}`);
+            return { data: JSON.parse(data) };
+          }
+        } catch (err) {
+          console.error('Error reading from fallback path:', err);
+        }
+        
+        return { error: 'No database path set' };
+      }
+    }
+    
+    try {
+      const filePath = path.join(app.databasePath, fileName);
+      console.log(`Reading file from database path: ${filePath}`);
+      
+      if (fs.existsSync(filePath)) {
+        const data = await fs.promises.readFile(filePath, 'utf8');
+        console.log(`Successfully read ${fileName} from: ${filePath}`);
+        return { data: JSON.parse(data) };
+      } else {
+        // If file doesn't exist in database path, try app data directory
+        const dataPath = path.join(__dirname, '..', 'data', fileName);
+        console.log(`File not found at database path, trying app data directory: ${dataPath}`);
+        
+        if (fs.existsSync(dataPath)) {
+          const data = await fs.promises.readFile(dataPath, 'utf8');
+          console.log(`Successfully read ${fileName} from app data directory: ${dataPath}`);
+          return { data: JSON.parse(data) };
+        } else {
+          return { error: `File ${fileName} not found in database or app data directory` };
+        }
+      }
+    } catch (err) {
+      console.error(`Error reading file ${fileName}:`, err);
+      return { error: err.message };
+    }
+  });
+  
+  // Handler to save data to a file
+  // Register save-database-file handler
+  console.log('Registering save-database-file handler');
+  ipcMain.handle('save-database-file', async (event, params) => {
+    const { fileName, data } = params;
+    console.log('Saving file:', fileName);
+    
+    // Special case for saving to local data directory
+    if (fileName === 'products.json' && !app.databasePath) {
+      try {
+        // Try to save to the app's data directory
+        const dataPath = path.join(__dirname, '..', 'data', 'products.json');
+        console.log('Saving to local path:', dataPath);
+        
+        // Ensure data directory exists
+        const dataDir = path.dirname(dataPath);
+        if (!fs.existsSync(dataDir)) {
+          await fs.promises.mkdir(dataDir, { recursive: true });
+        }
+        
+        await fs.promises.writeFile(dataPath, JSON.stringify(data, null, 2), 'utf8');
+        return { success: true };
+      } catch (err) {
+        console.error('Error saving local products.json:', err);
+        return { error: err.message };
+      }
+    }
+  
+    if (!app.databasePath) {
+      const settings = loadSettings();
+      if (settings && settings.databasePath) {
+        app.databasePath = settings.databasePath;
+      } else {
+        return { error: 'No database path set' };
+      }
+    }
+    
+    try {
+      const filePath = path.join(app.databasePath, fileName);
+      console.log('Saving to path:', filePath);
+      
+      // Ensure directory exists
+      const fileDir = path.dirname(filePath);
+      if (!fs.existsSync(fileDir)) {
+        await fs.promises.mkdir(fileDir, { recursive: true });
+      }
+      
+      await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+      return { success: true };
+    } catch (err) {
+      console.error('Error saving file:', err);
+      return { error: err.message };
+    }
+  });
+}
 
 // Settings helpers
 function getSettingsPath() {
@@ -427,7 +577,6 @@ function setupAppMenu() {
   
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
-}
 }
 
 // Quit when all windows are closed, except on macOS.

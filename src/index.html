@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' https://via.placeholder.com" />
     <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
+    <meta name="storage-path" content="/Users/peternordal/Documents/GitHub/sales/data/products.json" />
     <title>Project Hub</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="../node_modules/font-awesome/css/font-awesome.min.css" />
@@ -380,9 +381,19 @@
         </div>
         <div class="modal-body">
           <form id="product-form">
-            <div class="form-group">
-              <label for="product-id">Product ID</label>
-              <input type="text" id="product-id" readonly>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="product-id">Product ID</label>
+                <input type="text" id="product-id" readonly>
+              </div>
+              
+              <div class="form-group">
+                <label for="product-type">Product Type</label>
+                <select id="product-type">
+                  <option value="regular">Regular Product</option>
+                  <option value="bundle">Bundle/Kit</option>
+                </select>
+              </div>
             </div>
             
             <div class="form-row">
@@ -394,6 +405,18 @@
               <div class="form-group">
                 <label for="product-price">Price</label>
                 <input type="number" id="product-price" min="0" step="0.01" required>
+              </div>
+            </div>
+            
+            <div class="form-row bundle-fields" style="display: none;">
+              <div class="form-group">
+                <label for="product-regular-price">Regular Price (Full Price)</label>
+                <input type="number" id="product-regular-price" min="0" step="0.01">
+              </div>
+              
+              <div class="form-group">
+                <label for="product-bundle-savings">Bundle Savings Description</label>
+                <input type="text" id="product-bundle-savings" placeholder="e.g. 15% off regular price">
               </div>
             </div>
             
@@ -451,6 +474,17 @@
               <div class="form-group">
                 <label for="product-quantity">Quantity</label>
                 <input type="number" id="product-quantity" min="0" step="1">
+              </div>
+            </div>
+            
+            <!-- Bundle items section -->
+            <div class="form-row bundle-fields bundle-items-section" style="display: none;">
+              <div class="form-group full-width">
+                <label>Bundle Items</label>
+                <div id="bundle-items-container">
+                  <!-- Bundle item inputs will be added here dynamically -->
+                </div>
+                <button type="button" id="add-bundle-item" class="button button-outline"><i class="fa fa-plus"></i> Add Product to Bundle</button>
               </div>
             </div>
             

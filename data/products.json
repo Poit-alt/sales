@@ -1,12 +1,160 @@
 {
   "products": [
     {
+      "id": "BDL-001",
+      "name": "Business Starter Kit",
+      "description": "Complete business solution with accounting, project management, and document handling",
+      "category": "Bundle",
+      "subCategory": "Business Suite",
+      "price": 200,
+      "regularPrice": 2097,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 1,
+        "lowStockThreshold": 10
+      },
+      "isBundle": true,
+      "bundleItems": [
+        {
+          "productId": "PRD-001",
+          "quantity": 1
+        },
+        {
+          "productId": "PRD-006",
+          "quantity": 1
+        },
+        {
+          "productId": "PRD-010",
+          "quantity": 1
+        }
+      ],
+      "bundleSavings": "14% compared to buying separately",
+      "features": [
+        "Complete business management",
+        "Accounting & financial planning",
+        "Project & team management",
+        "Document organization & sharing",
+        "Integrated workflow"
+      ],
+      "media": {
+        "thumbnailUrl": "business_starter_kit_thumb.jpg"
+      },
+      "metadata": {
+        "createdAt": "2023-01-15T10:00:00Z",
+        "lastUpdated": "2023-03-30T14:20:00Z"
+      },
+      "status": "Active",
+      "popularity": 4.9
+    },
+    {
+      "id": "BDL-002",
+      "name": "Financial Management Bundle",
+      "description": "Complete financial tools package with accounting, payroll, and planning",
+      "category": "Bundle",
+      "subCategory": "Financial Suite",
+      "price": 1599,
+      "regularPrice": 1797,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 75,
+        "lowStockThreshold": 15
+      },
+      "isBundle": true,
+      "bundleItems": [
+        {
+          "productId": "PRD-001",
+          "quantity": 1
+        },
+        {
+          "productId": "PRD-002",
+          "quantity": 1
+        },
+        {
+          "productId": "PRD-005",
+          "quantity": 1
+        }
+      ],
+      "bundleSavings": "11% discount from individual pricing",
+      "features": [
+        "Complete financial management",
+        "Accounting & bookkeeping",
+        "Payroll & employee management",
+        "Financial planning & forecasting",
+        "Tax optimization tools"
+      ],
+      "media": {
+        "thumbnailUrl": "financial_bundle_thumb.jpg"
+      },
+      "metadata": {
+        "createdAt": "2023-02-05T09:30:00Z",
+        "lastUpdated": "2023-04-10T11:45:00Z"
+      },
+      "status": "Active",
+      "popularity": 4.7
+    },
+    {
+      "id": "BDL-003",
+      "name": "Retail Business Solution",
+      "description": "Complete retail management package with inventory, POS, and eCommerce",
+      "category": "Bundle",
+      "subCategory": "Retail Suite",
+      "price": 2499,
+      "regularPrice": 2997,
+      "currency": "USD",
+      "subscriptionType": "Annual",
+      "vatRate": 25,
+      "stockStatus": {
+        "inStock": true,
+        "quantity": 40,
+        "lowStockThreshold": 10
+      },
+      "isBundle": true,
+      "bundleItems": [
+        {
+          "productId": "PRD-003",
+          "quantity": 1
+        },
+        {
+          "productId": "PRD-004",
+          "quantity": 1
+        },
+        {
+          "productId": "PRD-007",
+          "quantity": 1
+        }
+      ],
+      "bundleSavings": "16% off regular price",
+      "features": [
+        "Complete retail business management",
+        "Inventory control and stock management",
+        "Point of sale system with hardware",
+        "Online store and eCommerce platform",
+        "Unified customer database",
+        "Integrated sales analytics"
+      ],
+      "media": {
+        "thumbnailUrl": "retail_solution_thumb.jpg"
+      },
+      "metadata": {
+        "createdAt": "2023-02-20T13:15:00Z",
+        "lastUpdated": "2023-04-15T10:30:00Z"
+      },
+      "status": "Active",
+      "popularity": 4.8
+    },
+    {
       "id": "PRD-001",
       "name": "Professional Accounting Suite",
       "description": "Complete accounting solution for small to medium businesses",
       "category": "Financial Software",
       "subCategory": "Accounting",
-      "price": 899.00,
+      "price": 899,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -18,8 +166,18 @@
       "specifications": {
         "version": "2023.1",
         "releaseDate": "2023-01-15",
-        "platforms": ["Windows", "macOS", "Cloud"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 12",
           "recommendedRAM": "8GB",
@@ -34,7 +192,11 @@
         "Payroll processing",
         "Bank reconciliation"
       ],
-      "compatibleProducts": ["PRD-005", "PRD-008", "PRD-012"],
+      "compatibleProducts": [
+        "PRD-005",
+        "PRD-008",
+        "PRD-012"
+      ],
       "media": {
         "thumbnailUrl": "accounting_suite_thumb.jpg",
         "images": [
@@ -56,7 +218,7 @@
       "description": "Comprehensive payroll management solution with automatic tax calculations",
       "category": "Financial Software",
       "subCategory": "Payroll",
-      "price": 499.00,
+      "price": 499,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -68,8 +230,17 @@
       "specifications": {
         "version": "4.2.1",
         "releaseDate": "2023-02-10",
-        "platforms": ["Windows", "macOS", "Cloud"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 11",
           "recommendedRAM": "6GB",
@@ -84,7 +255,10 @@
         "Compliance updates",
         "Multi-company support"
       ],
-      "compatibleProducts": ["PRD-001", "PRD-012"],
+      "compatibleProducts": [
+        "PRD-001",
+        "PRD-012"
+      ],
       "media": {
         "thumbnailUrl": "payroll_manager_thumb.jpg",
         "images": [
@@ -106,7 +280,7 @@
       "description": "Full-featured inventory management and control system",
       "category": "Business Management",
       "subCategory": "Inventory",
-      "price": 699.00,
+      "price": 699,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -118,8 +292,17 @@
       "specifications": {
         "version": "3.5.0",
         "releaseDate": "2023-01-20",
-        "platforms": ["Windows", "Cloud"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "German"],
+        "platforms": [
+          "Windows",
+          "Cloud"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "German"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10",
           "recommendedRAM": "8GB",
@@ -134,7 +317,11 @@
         "Batch tracking",
         "Demand forecasting"
       ],
-      "compatibleProducts": ["PRD-004", "PRD-007", "PRD-001"],
+      "compatibleProducts": [
+        "PRD-004",
+        "PRD-007",
+        "PRD-001"
+      ],
       "media": {
         "thumbnailUrl": "inventory_system_thumb.jpg",
         "images": [
@@ -157,7 +344,7 @@
       "description": "Modern POS system with hardware and software components",
       "category": "Business Management",
       "subCategory": "Point of Sale",
-      "price": 1299.00,
+      "price": 1299,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -169,8 +356,19 @@
       "specifications": {
         "version": "2.8.3",
         "releaseDate": "2023-02-05",
-        "platforms": ["Windows", "Android", "iOS"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German"],
+        "platforms": [
+          "Windows",
+          "Android",
+          "iOS"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish",
+          "German"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / Android 10 / iOS 14",
           "recommendedRAM": "4GB",
@@ -192,7 +390,11 @@
         "Reporting and analytics",
         "Offline operation mode"
       ],
-      "compatibleProducts": ["PRD-003", "PRD-007", "PRD-001"],
+      "compatibleProducts": [
+        "PRD-003",
+        "PRD-007",
+        "PRD-001"
+      ],
       "media": {
         "thumbnailUrl": "pos_terminal_thumb.jpg",
         "images": [
@@ -215,7 +417,7 @@
       "description": "Strategic financial planning and forecasting application",
       "category": "Financial Software",
       "subCategory": "Planning",
-      "price": 799.00,
+      "price": 799,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -227,8 +429,16 @@
       "specifications": {
         "version": "2.1.0",
         "releaseDate": "2023-01-30",
-        "platforms": ["Windows", "macOS", "Cloud"],
-        "languages": ["English", "Norwegian", "Swedish"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 12",
           "recommendedRAM": "8GB",
@@ -243,7 +453,10 @@
         "Custom reporting",
         "Data visualization"
       ],
-      "compatibleProducts": ["PRD-001", "PRD-008"],
+      "compatibleProducts": [
+        "PRD-001",
+        "PRD-008"
+      ],
       "media": {
         "thumbnailUrl": "financial_planning_thumb.jpg",
         "images": [
@@ -265,7 +478,7 @@
       "description": "End-to-end project planning and management solution",
       "category": "Business Management",
       "subCategory": "Project Management",
-      "price": 599.00,
+      "price": 599,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -277,8 +490,22 @@
       "specifications": {
         "version": "5.3.2",
         "releaseDate": "2023-02-15",
-        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German", "French"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud",
+          "iOS",
+          "Android"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish",
+          "German",
+          "French"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
           "recommendedRAM": "4GB",
@@ -294,7 +521,10 @@
         "Team collaboration",
         "Mobile access"
       ],
-      "compatibleProducts": ["PRD-009", "PRD-010"],
+      "compatibleProducts": [
+        "PRD-009",
+        "PRD-010"
+      ],
       "media": {
         "thumbnailUrl": "project_management_thumb.jpg",
         "images": [
@@ -318,7 +548,7 @@
       "description": "Complete online store solution with inventory and order management",
       "category": "Business Management",
       "subCategory": "eCommerce",
-      "price": 999.00,
+      "price": 999,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -330,8 +560,19 @@
       "specifications": {
         "version": "4.0.1",
         "releaseDate": "2023-01-25",
-        "platforms": ["Cloud"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German", "French", "Spanish"],
+        "platforms": [
+          "Cloud"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish",
+          "German",
+          "French",
+          "Spanish"
+        ],
         "systemRequirements": {
           "minimumBrowser": "Chrome 80+, Firefox 75+, Safari 14+, Edge 88+"
         }
@@ -345,7 +586,11 @@
         "SEO optimization tools",
         "Analytics and reporting"
       ],
-      "compatibleProducts": ["PRD-003", "PRD-004", "PRD-001"],
+      "compatibleProducts": [
+        "PRD-003",
+        "PRD-004",
+        "PRD-001"
+      ],
       "media": {
         "thumbnailUrl": "ecommerce_platform_thumb.jpg",
         "images": [
@@ -368,7 +613,7 @@
       "description": "Advanced analytics and data visualization platform",
       "category": "Business Intelligence",
       "subCategory": "Analytics",
-      "price": 1499.00,
+      "price": 1499,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -380,8 +625,16 @@
       "specifications": {
         "version": "3.2.5",
         "releaseDate": "2023-02-20",
-        "platforms": ["Windows", "macOS", "Cloud"],
-        "languages": ["English", "Norwegian", "Swedish"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 12",
           "recommendedRAM": "16GB",
@@ -397,7 +650,11 @@
         "Data visualization",
         "Export capabilities"
       ],
-      "compatibleProducts": ["PRD-001", "PRD-005", "PRD-009"],
+      "compatibleProducts": [
+        "PRD-001",
+        "PRD-005",
+        "PRD-009"
+      ],
       "media": {
         "thumbnailUrl": "bi_dashboard_thumb.jpg",
         "images": [
@@ -420,7 +677,7 @@
       "description": "Complete human resources management and employee self-service system",
       "category": "Business Management",
       "subCategory": "Human Resources",
-      "price": 899.00,
+      "price": 899,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -432,8 +689,21 @@
       "specifications": {
         "version": "2.9.0",
         "releaseDate": "2023-01-18",
-        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud",
+          "iOS",
+          "Android"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish",
+          "German"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
           "recommendedRAM": "6GB",
@@ -449,7 +719,11 @@
         "Leave management",
         "Employee self-service portal"
       ],
-      "compatibleProducts": ["PRD-002", "PRD-006", "PRD-010"],
+      "compatibleProducts": [
+        "PRD-002",
+        "PRD-006",
+        "PRD-010"
+      ],
       "media": {
         "thumbnailUrl": "hr_system_thumb.jpg",
         "images": [
@@ -472,7 +746,7 @@
       "description": "Secure document storage, management, and collaboration platform",
       "category": "Business Management",
       "subCategory": "Document Management",
-      "price": 599.00,
+      "price": 599,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -484,8 +758,23 @@
       "specifications": {
         "version": "4.5.2",
         "releaseDate": "2023-02-12",
-        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German", "French", "Spanish"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud",
+          "iOS",
+          "Android"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish",
+          "German",
+          "French",
+          "Spanish"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
           "recommendedRAM": "4GB",
@@ -501,7 +790,11 @@
         "Audit trails",
         "Secure sharing and collaboration"
       ],
-      "compatibleProducts": ["PRD-006", "PRD-009", "PRD-012"],
+      "compatibleProducts": [
+        "PRD-006",
+        "PRD-009",
+        "PRD-012"
+      ],
       "media": {
         "thumbnailUrl": "document_management_thumb.jpg",
         "images": [
@@ -523,7 +816,7 @@
       "description": "Complete CRM solution for sales, service, and marketing",
       "category": "Business Management",
       "subCategory": "CRM",
-      "price": 799.00,
+      "price": 799,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -535,8 +828,22 @@
       "specifications": {
         "version": "5.1.0",
         "releaseDate": "2023-01-22",
-        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German", "French"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud",
+          "iOS",
+          "Android"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish",
+          "German",
+          "French"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
           "recommendedRAM": "6GB",
@@ -552,7 +859,11 @@
         "Reporting and analytics",
         "Mobile access"
       ],
-      "compatibleProducts": ["PRD-004", "PRD-007", "PRD-008"],
+      "compatibleProducts": [
+        "PRD-004",
+        "PRD-007",
+        "PRD-008"
+      ],
       "media": {
         "thumbnailUrl": "crm_thumb.jpg",
         "images": [
@@ -575,7 +886,7 @@
       "description": "Streamlined time tracking and expense management solution",
       "category": "Business Management",
       "subCategory": "Time Tracking",
-      "price": 399.00,
+      "price": 399,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -587,8 +898,21 @@
       "specifications": {
         "version": "3.7.1",
         "releaseDate": "2023-02-08",
-        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud",
+          "iOS",
+          "Android"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish",
+          "German"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
           "recommendedRAM": "4GB",
@@ -604,7 +928,11 @@
         "Integration with accounting",
         "Mobile time entry"
       ],
-      "compatibleProducts": ["PRD-001", "PRD-006", "PRD-010"],
+      "compatibleProducts": [
+        "PRD-001",
+        "PRD-006",
+        "PRD-010"
+      ],
       "media": {
         "thumbnailUrl": "time_expense_thumb.jpg",
         "images": [
@@ -626,7 +954,7 @@
       "description": "Advanced expense reporting and reimbursement system",
       "category": "Financial Software",
       "subCategory": "Expense Management",
-      "price": 449.00,
+      "price": 449,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -639,8 +967,18 @@
       "specifications": {
         "version": "2.0.3",
         "releaseDate": "2023-01-05",
-        "platforms": ["Windows", "macOS", "Cloud", "iOS", "Android"],
-        "languages": ["English", "Norwegian", "Swedish"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud",
+          "iOS",
+          "Android"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 11 / iOS 14 / Android 10",
           "recommendedRAM": "4GB",
@@ -656,7 +994,11 @@
         "Mileage tracking",
         "Per diem calculations"
       ],
-      "compatibleProducts": ["PRD-001", "PRD-002", "PRD-012"],
+      "compatibleProducts": [
+        "PRD-001",
+        "PRD-002",
+        "PRD-012"
+      ],
       "media": {
         "thumbnailUrl": "expense_pro_thumb.jpg",
         "images": [
@@ -678,7 +1020,7 @@
       "description": "Regulatory compliance and risk management solution",
       "category": "Business Management",
       "subCategory": "Compliance",
-      "price": 1299.00,
+      "price": 1299,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -690,8 +1032,15 @@
       "specifications": {
         "version": "1.9.5",
         "releaseDate": "2023-01-28",
-        "platforms": ["Windows", "macOS", "Cloud"],
-        "languages": ["English", "Norwegian"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud"
+        ],
+        "languages": [
+          "English",
+          "Norwegian"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 12",
           "recommendedRAM": "8GB",
@@ -707,7 +1056,11 @@
         "Policy management",
         "Compliance reporting"
       ],
-      "compatibleProducts": ["PRD-001", "PRD-008", "PRD-010"],
+      "compatibleProducts": [
+        "PRD-001",
+        "PRD-008",
+        "PRD-010"
+      ],
       "media": {
         "thumbnailUrl": "compliance_suite_thumb.jpg",
         "images": [
@@ -721,7 +1074,7 @@
         "lastUpdated": "2023-03-17T11:55:25Z"
       },
       "status": "Active",
-      "popularity": 4.0
+      "popularity": 4
     },
     {
       "id": "PRD-015",
@@ -729,7 +1082,7 @@
       "description": "All-in-one business management solution for small businesses",
       "category": "Business Management",
       "subCategory": "ERP",
-      "price": 1999.00,
+      "price": 1999,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -741,8 +1094,19 @@
       "specifications": {
         "version": "6.1.0",
         "releaseDate": "2023-02-01",
-        "platforms": ["Windows", "macOS", "Cloud"],
-        "languages": ["English", "Norwegian", "Swedish", "Danish", "Finnish", "German"],
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Cloud"
+        ],
+        "languages": [
+          "English",
+          "Norwegian",
+          "Swedish",
+          "Danish",
+          "Finnish",
+          "German"
+        ],
         "systemRequirements": {
           "minimumOS": "Windows 10 / macOS 12",
           "recommendedRAM": "16GB",

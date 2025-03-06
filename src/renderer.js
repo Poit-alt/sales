@@ -194,19 +194,34 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Check if database path is already set
   async function checkDatabasePath() {
+    console.log('Checking database path on startup...');
+    
     if (window.electron && window.electron.database) {
+      // First, check for a data directory in the app's path
+      const appDataPath = '/Users/peternordal/Documents/GitHub/sales/data';
+      console.log('Checking for app data directory at:', appDataPath);
+      
+      // Always check for local data directory first
+      if (window.electron.database) {
+        console.log('Always try to load from local data directory first');
+        displayDatabasePath('Local data directory');
+        await loadProducts(); // Try to load from local data directory
+      }
+      
+      // Then check for user-selected database path
       const dbPath = await window.electron.database.getPath();
       
       if (dbPath) {
+        console.log('Database path is set to:', dbPath);
         displayDatabasePath(dbPath);
         loadDatabaseSummary(dbPath);
       } else {
+        console.log('No database path set, using local directory');
         displayNoDatabasePath();
-        // Try to load local products.json
-        loadProducts();
       }
     } else {
       // If running without Electron, load from local products.json
+      console.log('No electron context available, loading via fetch');
       loadProducts();
     }
   }
@@ -287,9 +302,66 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Load products from JSON files
   async function loadProducts(fileNames) {
+    // Log all parameters to debug
+    console.log('loadProducts called with fileNames:', fileNames);
+    
+    // Get hardcoded path from meta tag
+    const storagePath = document.querySelector('meta[name="storage-path"]');
+    const hardcodedPath = storagePath ? storagePath.getAttribute('content') : null;
+    console.log('Hardcoded storage path from HTML:', hardcodedPath);
+    
+    // Try to load products.json from the data directory (always try the app data directory first)
+    if (window.electron && window.electron.database) {
+      try {
+        console.log('Attempting to load products.json from app data directory');
+        console.log('OVERRIDE: Using hardcoded path for maximum reliability');
+        const result = await window.electron.database.readFile('products.json');
+        
+        if (result && !result.error && result.data && result.data.products) {
+          console.log('Successfully loaded products from app data directory:', result.data.products.length, 'products');
+          console.log('Product IDs in loaded data:', result.data.products.map(p => p.id).join(', '));
+          allProducts = result.data.products;
+          
+          // Extract categories
+          allProducts.forEach(product => {
+            if (product.category) {
+              categories.add(product.category);
+            }
+            if (product.subCategory) {
+              categories.add(product.subCategory);
+            }
+          });
+          
+          // If there's a categories section, use those as well
+          if (result.data.categories) {
+            result.data.categories.forEach(category => {
+              categories.add(category.name);
+              if (category.subCategories) {
+                category.subCategories.forEach(sub => {
+                  categories.add(sub.name);
+                });
+              }
+            });
+          }
+          
+          // Update category filter and apply filters
+          updateCategoryFilter();
+          applyFilters();
+          
+          return;
+        } else {
+          console.log('Failed to read products.json from app data directory:', result);
+        }
+      } catch (err) {
+        console.error('Error loading products from app data directory:', err);
+      }
+    }
+    
+    // Fallback to loading via HTTP if electron method failed
     if (!window.electron || !window.electron.database) {
       // If we're running in development or without Electron, load directly from local file
       try {
+        console.log('Loading products from local file via fetch');
         const response = await fetch('/data/products.json');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -339,10 +411,14 @@ document.addEventListener('DOMContentLoaded', () => {
       allProducts = [];
       categories.clear(); 
       
+      console.log('Loading products using electron database API');
+      
       // First, try to load products.json directly
       const result = await window.electron.database.readFile('products.json');
+      console.log('Database readFile result:', result);
       
       if (!result.error && result.data && result.data.products) {
+        console.log('Successfully loaded products from database:', result.data.products.length);
         // Use the products from products.json
         allProducts = result.data.products;
         
@@ -580,11 +656,26 @@ document.addEventListener('DOMContentLoaded', () => {
       // Format price with currency
       let priceDisplay = formatPrice(product.price, product.currency);
       
+      // For bundles, format price to show savings
+      let priceColumn = priceDisplay;
+      if (product.isBundle && product.regularPrice) {
+        const savings = ((product.regularPrice - product.price) / product.regularPrice * 100).toFixed(1);
+        priceColumn = `
+          <div>${priceDisplay}</div>
+          <div class="price-savings">Save ${savings}% from ${formatPrice(product.regularPrice, product.currency)}</div>
+        `;
+      }
+      
+      // Show bundle indicator for bundle products
+      const nameColumn = product.isBundle 
+        ? `<div>${product.name || ''}</div><span class="bundle-indicator">Bundle</span>` 
+        : product.name || '';
+      
       row.innerHTML = `
         <td>${product.id || ''}</td>
-        <td>${product.name || ''}</td>
+        <td>${nameColumn}</td>
         <td>${product.category || ''} ${product.subCategory ? `/ ${product.subCategory}` : ''}</td>
-        <td>${priceDisplay}</td>
+        <td>${priceColumn}</td>
         <td>${stockDisplay}</td>
         <td><span class="${statusClass}">${status}</span></td>
         <td>
@@ -668,18 +759,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const productForm = document.getElementById('product-form');
   const addFeatureBtn = document.getElementById('add-feature');
   const featuresContainer = document.getElementById('features-container');
+  const addBundleItemBtn = document.getElementById('add-bundle-item');
+  const bundleItemsContainer = document.getElementById('bundle-items-container');
   
   // Modal field elements
   const productIdField = document.getElementById('product-id');
+  const productTypeField = document.getElementById('product-type');
   const productNameField = document.getElementById('product-name');
   const productDescriptionField = document.getElementById('product-description');
   const productPriceField = document.getElementById('product-price');
+  const productRegularPriceField = document.getElementById('product-regular-price');
+  const productBundleSavingsField = document.getElementById('product-bundle-savings');
   const productCategoryField = document.getElementById('product-category');
   const productSubcategoryField = document.getElementById('product-subcategory');
   const productCurrencyField = document.getElementById('product-currency');
   const productStatusField = document.getElementById('product-status');
   const productInStockField = document.getElementById('product-instock');
   const productQuantityField = document.getElementById('product-quantity');
+  
+  // Get all bundle field elements
+  const bundleFields = document.querySelectorAll('.bundle-fields');
   
   // Variable to store the currently editing product
   let currentEditingProduct = null;
@@ -702,10 +801,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // Toggle product type fields
+  if (productTypeField) {
+    productTypeField.addEventListener('change', () => {
+      const isBundle = productTypeField.value === 'bundle';
+      
+      // Show/hide bundle fields
+      bundleFields.forEach(field => {
+        field.style.display = isBundle ? 'flex' : 'none';
+      });
+      
+      // Update category field with Bundle option
+      updateCategoryForProductType(isBundle);
+    });
+  }
+  
   // Add feature button functionality
   if (addFeatureBtn) {
     addFeatureBtn.addEventListener('click', () => {
       addFeatureInput();
+    });
+  }
+  
+  // Add bundle item button functionality
+  if (addBundleItemBtn) {
+    addBundleItemBtn.addEventListener('click', () => {
+      addBundleItemInput();
     });
   }
   
@@ -715,6 +836,28 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       saveProductChanges();
     });
+  }
+  
+  // Update category dropdown based on product type
+  function updateCategoryForProductType(isBundle) {
+    if (!productCategoryField) return;
+    
+    const currentValue = productCategoryField.value;
+    const hasBundle = Array.from(productCategoryField.options).some(option => option.value === 'Bundle');
+    
+    if (isBundle && !hasBundle) {
+      // Add Bundle category if not already in the list
+      const bundleOption = document.createElement('option');
+      bundleOption.value = 'Bundle';
+      bundleOption.textContent = 'Bundle';
+      productCategoryField.appendChild(bundleOption);
+      
+      // Select it if this is a bundle
+      productCategoryField.value = 'Bundle';
+    } else if (isBundle && hasBundle) {
+      // If it's a bundle and we already have a Bundle option, select it
+      productCategoryField.value = 'Bundle';
+    }
   }
   
   // Open modal to edit a product
@@ -739,6 +882,19 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Populate the form with product data
   function populateProductForm(product) {
+    // Determine if this is a bundle product
+    const isBundle = product.isBundle || false;
+    
+    // Set product type
+    if (productTypeField) {
+      productTypeField.value = isBundle ? 'bundle' : 'regular';
+      
+      // Show/hide bundle fields
+      bundleFields.forEach(field => {
+        field.style.display = isBundle ? 'flex' : 'none';
+      });
+    }
+    
     // Basic fields
     if (productIdField) productIdField.value = product.id || '';
     if (productNameField) productNameField.value = product.name || '';
@@ -746,6 +902,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (productPriceField) productPriceField.value = product.price || '';
     if (productCurrencyField) productCurrencyField.value = product.currency || 'USD';
     if (productStatusField) productStatusField.value = product.status || 'Active';
+    
+    // Bundle-specific fields
+    if (isBundle) {
+      if (productRegularPriceField) productRegularPriceField.value = product.regularPrice || '';
+      if (productBundleSavingsField) productBundleSavingsField.value = product.bundleSavings || '';
+    }
     
     // Stock status
     let inStock = true;
@@ -762,8 +924,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Categories
     populateCategoryDropdowns(product.category, product.subCategory);
     
+    // Update category for product type
+    updateCategoryForProductType(isBundle);
+    
     // Features
     populateFeatures(product.features || []);
+    
+    // Bundle items
+    if (isBundle && product.bundleItems) {
+      populateBundleItems(product.bundleItems);
+    }
   }
   
   // Populate category dropdowns
@@ -824,6 +994,181 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
+  // Populate bundle items
+  function populateBundleItems(bundleItems = []) {
+    if (!bundleItemsContainer) return;
+    
+    // Clear existing bundle items
+    bundleItemsContainer.innerHTML = '';
+    
+    // Add each bundle item
+    if (bundleItems && bundleItems.length > 0) {
+      bundleItems.forEach(item => {
+        addBundleItemInput(item);
+      });
+    }
+  }
+  
+  // Add a bundle item input
+  function addBundleItemInput(bundleItem = null) {
+    if (!bundleItemsContainer) return;
+    
+    const productId = bundleItem?.productId || '';
+    const quantity = bundleItem?.quantity || 1;
+    
+    const bundleItemContainer = document.createElement('div');
+    bundleItemContainer.className = 'bundle-item-container';
+    
+    // Create the bundle item markup
+    bundleItemContainer.innerHTML = `
+      <div class="bundle-item-header">
+        <div class="bundle-item-title">Bundle Item</div>
+        <button type="button" class="bundle-item-remove-btn"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="bundle-item-details">
+        <div class="bundle-item-detail">
+          <label>Product</label>
+          <select class="bundle-item-product-select">
+            <option value="">Select a product</option>
+            ${generateProductOptionsHTML(productId)}
+          </select>
+        </div>
+        <div class="bundle-item-detail">
+          <label>Quantity</label>
+          <input type="number" class="bundle-item-quantity" value="${quantity}" min="1" step="1">
+        </div>
+      </div>
+      <div class="bundle-item-preview">
+        <div class="bundle-item-preview-content">
+          <!-- Will be populated by updateBundleItemPreview -->
+        </div>
+      </div>
+    `;
+    
+    // Add remove button functionality
+    const removeBtn = bundleItemContainer.querySelector('.bundle-item-remove-btn');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        bundleItemContainer.remove();
+        updateBundlePriceInfo();
+      });
+    }
+    
+    // Add product select change handler
+    const productSelect = bundleItemContainer.querySelector('.bundle-item-product-select');
+    if (productSelect) {
+      productSelect.addEventListener('change', () => {
+        updateBundleItemPreview(bundleItemContainer);
+        updateBundlePriceInfo();
+      });
+    }
+    
+    // Add quantity change handler
+    const quantityInput = bundleItemContainer.querySelector('.bundle-item-quantity');
+    if (quantityInput) {
+      quantityInput.addEventListener('input', () => {
+        updateBundleItemPreview(bundleItemContainer);
+        updateBundlePriceInfo();
+      });
+    }
+    
+    // Add to the container
+    bundleItemsContainer.appendChild(bundleItemContainer);
+    
+    // Update the preview and price info
+    updateBundleItemPreview(bundleItemContainer);
+    updateBundlePriceInfo();
+  }
+  
+  // Generate HTML for product options
+  function generateProductOptionsHTML(selectedProductId = '') {
+    // Filter out bundle products from the options to prevent circular references
+    const regularProducts = allProducts.filter(product => !product.isBundle);
+    
+    return regularProducts.map(product => {
+      const selected = product.id === selectedProductId ? 'selected' : '';
+      return `<option value="${product.id}" ${selected}>${product.name}</option>`;
+    }).join('');
+  }
+  
+  // Update bundle item preview
+  function updateBundleItemPreview(bundleItemContainer) {
+    const productSelect = bundleItemContainer.querySelector('.bundle-item-product-select');
+    const quantityInput = bundleItemContainer.querySelector('.bundle-item-quantity');
+    const previewContent = bundleItemContainer.querySelector('.bundle-item-preview-content');
+    
+    if (!productSelect || !quantityInput || !previewContent) return;
+    
+    const productId = productSelect.value;
+    const quantity = parseInt(quantityInput.value, 10) || 1;
+    
+    if (!productId) {
+      previewContent.innerHTML = '<p>No product selected</p>';
+      return;
+    }
+    
+    const product = findProductById(productId);
+    if (product) {
+      const totalPrice = product.price * quantity;
+      
+      previewContent.innerHTML = `
+        <div class="bundle-item-preview-img">
+          <i class="fa fa-cube"></i>
+        </div>
+        <div class="bundle-item-preview-info">
+          <div class="bundle-item-preview-name">${product.name}</div>
+          <div class="bundle-item-preview-price">
+            ${quantity} x ${formatPrice(product.price, product.currency)} = ${formatPrice(totalPrice, product.currency)}
+          </div>
+        </div>
+      `;
+    } else {
+      previewContent.innerHTML = '<p>Product not found</p>';
+    }
+  }
+  
+  // Update bundle price information
+  function updateBundlePriceInfo() {
+    if (!productRegularPriceField || !bundleItemsContainer) return;
+    
+    // Calculate the total price of all bundle items
+    let totalBundleItemsPrice = 0;
+    
+    const bundleItems = bundleItemsContainer.querySelectorAll('.bundle-item-container');
+    bundleItems.forEach(item => {
+      const productSelect = item.querySelector('.bundle-item-product-select');
+      const quantityInput = item.querySelector('.bundle-item-quantity');
+      
+      if (productSelect && quantityInput) {
+        const productId = productSelect.value;
+        const quantity = parseInt(quantityInput.value, 10) || 1;
+        
+        if (productId) {
+          const product = findProductById(productId);
+          if (product) {
+            totalBundleItemsPrice += product.price * quantity;
+          }
+        }
+      }
+    });
+    
+    // Update the regular price field with the calculated total
+    productRegularPriceField.value = totalBundleItemsPrice.toFixed(2);
+    
+    // Calculate savings percentage if bundle price is set
+    if (productPriceField && productPriceField.value) {
+      const bundlePrice = parseFloat(productPriceField.value);
+      if (bundlePrice > 0 && totalBundleItemsPrice > 0) {
+        const savingsPercentage = ((totalBundleItemsPrice - bundlePrice) / totalBundleItemsPrice * 100).toFixed(1);
+        
+        // Update savings description if available
+        if (productBundleSavingsField && !productBundleSavingsField.value) {
+          productBundleSavingsField.value = `${savingsPercentage}% off regular price`;
+        }
+      }
+    }
+  }
+  
   // Add a feature input field
   function addFeatureInput(value = '') {
     if (!featuresContainer) return;
@@ -851,9 +1196,15 @@ document.addEventListener('DOMContentLoaded', () => {
   async function saveProductChanges() {
     if (!currentEditingProduct) return;
     
+    console.log('Saving changes for product:', currentEditingProduct.id);
+    
+    // Get product type
+    const isBundle = productTypeField ? productTypeField.value === 'bundle' : false;
+    
     // Get form values
     const updatedProduct = {
       ...currentEditingProduct,
+      id: currentEditingProduct.id, // Make absolutely sure the ID is preserved
       name: productNameField ? productNameField.value : currentEditingProduct.name,
       description: productDescriptionField ? productDescriptionField.value : currentEditingProduct.description,
       price: productPriceField ? parseFloat(productPriceField.value) : currentEditingProduct.price,
@@ -862,6 +1213,43 @@ document.addEventListener('DOMContentLoaded', () => {
       currency: productCurrencyField ? productCurrencyField.value : currentEditingProduct.currency,
       status: productStatusField ? productStatusField.value : currentEditingProduct.status,
     };
+    
+    console.log('Original product:', currentEditingProduct);
+    console.log('Updated product:', updatedProduct);
+    
+    // Update bundle-specific properties
+    if (isBundle) {
+      updatedProduct.isBundle = true;
+      
+      // Set regular price and bundle savings
+      if (productRegularPriceField) {
+        updatedProduct.regularPrice = parseFloat(productRegularPriceField.value) || 0;
+      }
+      
+      if (productBundleSavingsField) {
+        updatedProduct.bundleSavings = productBundleSavingsField.value || '';
+      }
+      
+      // Collect bundle items
+      if (bundleItemsContainer) {
+        const bundleItemElements = bundleItemsContainer.querySelectorAll('.bundle-item-container');
+        updatedProduct.bundleItems = Array.from(bundleItemElements).map(itemEl => {
+          const productSelect = itemEl.querySelector('.bundle-item-product-select');
+          const quantityInput = itemEl.querySelector('.bundle-item-quantity');
+          
+          return {
+            productId: productSelect ? productSelect.value : '',
+            quantity: quantityInput ? parseInt(quantityInput.value, 10) || 1 : 1
+          };
+        }).filter(item => item.productId); // Filter out items with no product selected
+      }
+    } else {
+      // Remove bundle properties if this is not a bundle
+      updatedProduct.isBundle = false;
+      delete updatedProduct.regularPrice;
+      delete updatedProduct.bundleSavings;
+      delete updatedProduct.bundleItems;
+    }
     
     // Update stock status
     updatedProduct.stockStatus = {
@@ -879,9 +1267,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Update product in the allProducts array
+    console.log(`Searching for product with ID ${updatedProduct.id} in allProducts array of length ${allProducts.length}`);
     const productIndex = allProducts.findIndex(p => p.id === updatedProduct.id);
+    console.log(`Product index in global array: ${productIndex}`);
+    
     if (productIndex !== -1) {
+      console.log('Product found in allProducts array, updating...');
       allProducts[productIndex] = updatedProduct;
+      console.log('Product updated in global array, new value:', allProducts[productIndex]);
       
       // Update the UI
       applyFilters();
@@ -897,30 +1290,61 @@ document.addEventListener('DOMContentLoaded', () => {
             const productsData = result.data;
             
             // Find and update the product in the array
+            console.log('Loaded products data with', productsData.products.length, 'products');
+            console.log('Current product IDs in file:', productsData.products.map(p => p.id).join(', '));
+            
             const fileProductIndex = productsData.products.findIndex(p => p.id === updatedProduct.id);
+            console.log(`Finding product with ID ${updatedProduct.id} in file data, index:`, fileProductIndex);
+            
             if (fileProductIndex !== -1) {
+              console.log('Replacing product in file data');
               productsData.products[fileProductIndex] = updatedProduct;
-              
-              // Save the updated data back to the file
-              const saveResult = await window.electron.database.saveFile('products.json', productsData);
-              
-              if (saveResult.success) {
-                console.log('Product saved to file successfully');
-              } else {
-                console.error('Failed to save product to file:', saveResult.error);
-                alert('Warning: Product was updated in memory but failed to save to file: ' + saveResult.error);
-              }
+            } else {
+              console.log('Product not found in file data, adding it directly');
+              productsData.products.push(updatedProduct);
             }
+            
+            // Use the direct IPC send approach which is already working
+            console.log('Saving product data via IPC...');
+            
+            // Set up one-time listener for the save result
+            const onSaveResult = (result) => {
+              // Remove the listener to avoid multiple callbacks
+              window.electron.receiveFromMain('save-products-result', onSaveResult);
+              
+              if (result.success) {
+                console.log('Product saved successfully to:', result.path);
+                // Show a success message with the save path
+                const savedPath = result.path || 'selected database';
+                
+                // Update the global products array to ensure changes persist in memory
+                const updatedProductInGlobal = allProducts.findIndex(p => p.id === updatedProduct.id);
+                if (updatedProductInGlobal !== -1) {
+                  allProducts[updatedProductInGlobal] = updatedProduct;
+                  console.log('Updated product in global products array');
+                }
+                
+                alert(`Product updated and saved successfully to: ${savedPath}`);
+              } else {
+                console.error('Failed to save via IPC:', result.error);
+                alert('Warning: Product was updated in memory but failed to save to file: ' + result.error);
+              }
+            };
+            
+            // Register the event listener
+            window.electron.receiveFromMain('save-products-result', onSaveResult);
+            
+            // Send the products data to the main process
+            window.electron.sendToMain('save-products', productsData);
           }
         } catch (err) {
           console.error('Error saving product:', err);
-          alert('Warning: Product was updated in memory but failed to save to file');
+          alert('Warning: Product was updated in memory but failed to generate the download');
         }
       }
       
-      // Show success message
-      console.log('Product updated successfully:', updatedProduct);
-      alert('Product updated successfully!');
+      // Show success message (this will be shown after the save result is received)
+      console.log('Product updated successfully in memory:', updatedProduct);
       
       // Close the modal
       closeModal();
@@ -931,13 +1355,30 @@ document.addEventListener('DOMContentLoaded', () => {
   function showProductDetails(product) {
     // In a real app, you might show a detailed view
     // For now, just alert with some basic info
-    const details = `
+    let details = `
       ID: ${product.id}
       Name: ${product.name}
       Category: ${product.category}${product.subCategory ? ' / ' + product.subCategory : ''}
       Price: ${formatPrice(product.price, product.currency)}
       Status: ${product.status || 'Active'}
     `;
+    
+    // For bundles, add bundle-specific information
+    if (product.isBundle) {
+      details += `\nRegular Price: ${formatPrice(product.regularPrice || 0, product.currency)}`;
+      details += `\nSavings: ${product.bundleSavings || ''}`;
+      
+      // Add bundle items
+      if (product.bundleItems && product.bundleItems.length > 0) {
+        details += '\n\nBundle Contains:';
+        product.bundleItems.forEach(item => {
+          const bundledProduct = findProductById(item.productId);
+          if (bundledProduct) {
+            details += `\n- ${item.quantity}x ${bundledProduct.name} (${formatPrice(bundledProduct.price, bundledProduct.currency)} each)`;
+          }
+        });
+      }
+    }
     
     alert(details);
   }

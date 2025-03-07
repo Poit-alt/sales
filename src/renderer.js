@@ -10,6 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
     productsTab: document.getElementById('products-tab')
   });
   
+  // Add event listeners for modal tabs
+  const modalTabs = document.querySelectorAll('.modal-tab');
+  modalTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      // Extract tab ID from button ID (modal-tab-details -> details)
+      const tabId = tab.id.replace('modal-tab-', '');
+      setActiveModalTab(tabId);
+    });
+  });
+  
   // Detect platform and add appropriate class to body
   // This will be used for platform-specific styling
   if (window.electron && window.electron.platform) {
@@ -877,8 +887,119 @@ document.addEventListener('DOMContentLoaded', () => {
     // Populate form fields
     populateProductForm(product);
     
+    // Populate price history tab
+    populatePriceHistory(product);
+    
     // Show the modal
     productModal.classList.add('active');
+    
+    // Set the default active tab
+    setActiveModalTab('details');
+  }
+  
+  // Set active modal tab
+  function setActiveModalTab(tabId) {
+    // Get all tabs and tab contents
+    const tabs = document.querySelectorAll('.modal-tab');
+    const tabContents = document.querySelectorAll('.modal-tab-content');
+    
+    // Remove active class from all tabs and contents
+    tabs.forEach(tab => tab.classList.remove('active'));
+    tabContents.forEach(content => content.classList.remove('active'));
+    
+    // Add active class to selected tab and content
+    const selectedTab = document.getElementById(`modal-tab-${tabId}`);
+    if (selectedTab) {
+      selectedTab.classList.add('active');
+    }
+    
+    const selectedContent = document.querySelector(`.modal-tab-content[data-tab="${tabId}"]`);
+    if (selectedContent) {
+      selectedContent.classList.add('active');
+    }
+  }
+  
+  // Populate price history tab
+  function populatePriceHistory(product) {
+    const priceHistoryTableBody = document.getElementById('price-history-table-body');
+    const priceHistoryEmpty = document.getElementById('price-history-empty');
+    const currentPriceDisplay = document.getElementById('current-price-display');
+    
+    if (!priceHistoryTableBody || !priceHistoryEmpty || !currentPriceDisplay) return;
+    
+    // Show current price
+    const currentPriceFormatted = formatPrice(product.price, product.currency);
+    currentPriceDisplay.textContent = currentPriceFormatted;
+    
+    // Add extra info for bundles
+    if (product.isBundle && product.regularPrice) {
+      const regularPriceFormatted = formatPrice(product.regularPrice, product.currency);
+      currentPriceDisplay.textContent = `${currentPriceFormatted} (Regular: ${regularPriceFormatted})`;
+    }
+    
+    // Clear existing table rows
+    priceHistoryTableBody.innerHTML = '';
+    
+    // Check if price history exists
+    if (!product.priceHistory || product.priceHistory.length === 0) {
+      // Show empty state and hide table
+      priceHistoryEmpty.style.display = 'block';
+      document.querySelector('.price-history-table-container').style.display = 'none';
+      return;
+    }
+    
+    // Show table and hide empty state
+    priceHistoryEmpty.style.display = 'none';
+    document.querySelector('.price-history-table-container').style.display = 'block';
+    
+    // Sort price history by date (most recent first)
+    const sortedHistory = [...product.priceHistory].sort((a, b) => {
+      return new Date(b.date) - new Date(a.date);
+    });
+    
+    // Add rows for each price change
+    sortedHistory.forEach((entry, index) => {
+      const row = document.createElement('tr');
+      
+      // Format date
+      const date = new Date(entry.date);
+      const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+      
+      // Format price and determine if it was an increase or decrease
+      const price = formatPrice(entry.price, entry.currency);
+      let priceChangeHTML = price;
+      
+      // Add price change indicator if not the first price (oldest)
+      if (index < sortedHistory.length - 1) {
+        const nextEntry = sortedHistory[index + 1]; // Next entry is actually the previous in time
+        const prevPrice = nextEntry.price;
+        const priceDiff = entry.price - prevPrice;
+        
+        if (priceDiff !== 0) {
+          const changePercent = ((priceDiff / prevPrice) * 100).toFixed(1);
+          const changeClass = priceDiff > 0 ? 'price-increase change-up' : 'price-decrease change-down';
+          const changeSign = priceDiff > 0 ? '+' : '';
+          
+          priceChangeHTML += ` <span class="price-change ${changeClass}">${changeSign}${changePercent}%</span>`;
+        }
+      }
+      
+      // Regular price for bundles
+      let regularPriceCell = '-';
+      if (entry.regularPrice) {
+        regularPriceCell = formatPrice(entry.regularPrice, entry.currency);
+      }
+      
+      row.innerHTML = `
+        <td>${formattedDate}</td>
+        <td>${priceChangeHTML}</td>
+        <td>${regularPriceCell}</td>
+        <td>${entry.currency}</td>
+        <td>${entry.changedBy || 'Unknown'}</td>
+      `;
+      
+      priceHistoryTableBody.appendChild(row);
+    });
   }
   
   // Populate the form with product data
@@ -1286,6 +1407,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Calculate the total price of all bundle items
     let totalBundleItemsPrice = 0;
     
+    // Keep track of products to catch duplicates
+    const bundleProducts = new Map(); // Map<productId, {count, price, totalQuantity}>
+    
     const bundleItems = bundleItemsContainer.querySelectorAll('.bundle-item-container');
     bundleItems.forEach(item => {
       const productSelect = item.querySelector('.bundle-item-product-select');
@@ -1298,11 +1422,81 @@ document.addEventListener('DOMContentLoaded', () => {
         if (productId) {
           const product = findProductById(productId);
           if (product) {
+            // Add to total price
             totalBundleItemsPrice += product.price * quantity;
+            
+            // Add to product tracking
+            if (bundleProducts.has(productId)) {
+              // Update existing product entry
+              const productInfo = bundleProducts.get(productId);
+              productInfo.count++;
+              productInfo.totalQuantity += quantity;
+            } else {
+              // Create new product entry
+              bundleProducts.set(productId, {
+                count: 1,
+                price: product.price,
+                totalQuantity: quantity,
+                name: product.name
+              });
+            }
           }
         }
       }
     });
+    
+    // Check for duplicate products and show warning if needed
+    let duplicateWarningContainer = document.getElementById('duplicate-product-warning');
+    
+    // Remove existing warning if it exists
+    if (duplicateWarningContainer) {
+      duplicateWarningContainer.remove();
+    }
+    
+    // Find duplicates and show warning if any exist
+    const duplicates = Array.from(bundleProducts.entries())
+      .filter(([_, info]) => info.count > 1)
+      .map(([id, info]) => ({
+        id,
+        name: info.name,
+        count: info.count,
+        totalQuantity: info.totalQuantity
+      }));
+    
+    if (duplicates.length > 0) {
+      // Create warning element
+      duplicateWarningContainer = document.createElement('div');
+      duplicateWarningContainer.id = 'duplicate-product-warning';
+      duplicateWarningContainer.className = 'bundle-warning';
+      
+      let warningHTML = `
+        <div class="warning-header">
+          <i class="fa fa-info-circle"></i> Product Added Multiple Times
+        </div>
+        <div class="warning-content">
+          <p>The following products appear multiple times in this bundle:</p>
+          <ul>
+      `;
+      
+      duplicates.forEach(dup => {
+        warningHTML += `
+          <li><strong>${dup.name}</strong> (${dup.id}) - ${dup.count} times, total quantity: ${dup.totalQuantity}</li>
+        `;
+      });
+      
+      warningHTML += `
+          </ul>
+          <p>Consider consolidating each product into a single entry with the total quantity.</p>
+        </div>
+      `;
+      
+      duplicateWarningContainer.innerHTML = warningHTML;
+      
+      // Insert after bundle items container
+      if (bundleItemsContainer.parentNode) {
+        bundleItemsContainer.parentNode.insertBefore(duplicateWarningContainer, bundleItemsContainer.nextSibling);
+      }
+    }
     
     // Update the regular price field with the calculated total
     productRegularPriceField.value = totalBundleItemsPrice.toFixed(2);
@@ -1365,6 +1559,38 @@ document.addEventListener('DOMContentLoaded', () => {
       currency: productCurrencyField ? productCurrencyField.value : currentEditingProduct.currency,
       status: productStatusField ? productStatusField.value : currentEditingProduct.status,
     };
+    
+    // Check if price has changed
+    const priceChanged = updatedProduct.price !== currentEditingProduct.price;
+    const regularPriceChanged = isBundle && 
+      productRegularPriceField && 
+      parseFloat(productRegularPriceField.value) !== currentEditingProduct.regularPrice;
+    
+    // If price has changed, add to price history
+    if (priceChanged || regularPriceChanged) {
+      // Initialize price history array if it doesn't exist
+      if (!updatedProduct.priceHistory) {
+        updatedProduct.priceHistory = [];
+      }
+      
+      // Create a new price history entry
+      const priceHistoryEntry = {
+        date: new Date().toISOString(),
+        price: updatedProduct.price,
+        currency: updatedProduct.currency,
+        changedBy: "user" // In a real app, this would be the current user's ID or name
+      };
+      
+      // Add bundle specific price data if applicable
+      if (isBundle && productRegularPriceField) {
+        priceHistoryEntry.regularPrice = parseFloat(productRegularPriceField.value);
+      }
+      
+      // Add the entry to the history
+      updatedProduct.priceHistory.push(priceHistoryEntry);
+      
+      console.log('Price changed, adding to price history:', priceHistoryEntry);
+    }
     
     console.log('Original product:', currentEditingProduct);
     console.log('Updated product:', updatedProduct);

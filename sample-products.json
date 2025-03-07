@@ -11,6 +11,22 @@
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
+      "priceHistory": [
+        {
+          "date": "2023-01-15T10:00:00Z",
+          "price": 180,
+          "regularPrice": 8999,
+          "currency": "USD",
+          "changedBy": "system"
+        },
+        {
+          "date": "2023-03-30T14:20:00Z",
+          "price": 200,
+          "regularPrice": 9288,
+          "currency": "USD",
+          "changedBy": "admin"
+        }
+      ],
       "stockStatus": {
         "inStock": true,
         "quantity": 1,
@@ -27,7 +43,7 @@
           "quantity": 5
         },
         {
-          "productId": "PRD-001",
+          "productId": "PRD-002",
           "quantity": 6
         }
       ],
@@ -158,6 +174,20 @@
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
+      "priceHistory": [
+        {
+          "date": "2022-11-10T14:30:00Z",
+          "price": 849,
+          "currency": "USD",
+          "changedBy": "system"
+        },
+        {
+          "date": "2023-01-05T09:00:00Z",
+          "price": 899,
+          "currency": "USD",
+          "changedBy": "admin"
+        }
+      ],
       "stockStatus": {
         "inStock": true,
         "quantity": 150,
@@ -1082,7 +1112,7 @@
       "description": "All-in-one business management solution for small businesses",
       "category": "Business Management",
       "subCategory": "ERP",
-      "price": 1999,
+      "price": 3000,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -1138,7 +1168,22 @@
         "lastUpdated": "2023-03-25T10:15:40Z"
       },
       "status": "Active",
-      "popularity": 4.8
+      "popularity": 4.8,
+      "priceHistory": [
+        {
+          "date": "2025-03-07T18:55:44.779Z",
+          "price": 2500,
+          "currency": "USD",
+          "changedBy": "user"
+        },
+        {
+          "date": "2025-03-07T18:56:16.661Z",
+          "price": 3000,
+          "currency": "USD",
+          "changedBy": "user"
+        }
+      ],
+      "isBundle": false
     }
   ],
   "categories": [

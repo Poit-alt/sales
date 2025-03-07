@@ -380,7 +380,12 @@
           <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
-          <form id="product-form">
+          <div class="modal-tabs">
+            <button type="button" id="modal-tab-details" class="modal-tab active">Details</button>
+            <button type="button" id="modal-tab-price-history" class="modal-tab">Price History</button>
+          </div>
+          
+          <form id="product-form" class="modal-tab-content active" data-tab="details">
             <div class="form-row">
               <div class="form-group">
                 <label for="product-id">Product ID</label>
@@ -503,6 +508,34 @@
               <button type="submit" id="save-product" class="button">Save Changes</button>
             </div>
           </form>
+          
+          <div id="price-history-container" class="modal-tab-content" data-tab="price-history">
+            <div class="price-history-header">
+              <h3>Price History</h3>
+              <p class="price-history-current">Current Price: <span id="current-price-display">-</span></p>
+            </div>
+            
+            <div class="price-history-empty" id="price-history-empty">
+              <p>No price change history available for this product.</p>
+            </div>
+            
+            <div class="price-history-table-container">
+              <table class="price-history-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Price</th>
+                    <th>Regular Price</th>
+                    <th>Currency</th>
+                    <th>Changed By</th>
+                  </tr>
+                </thead>
+                <tbody id="price-history-table-body">
+                  <!-- Price history entries will be added here dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>

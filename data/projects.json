@@ -122,19 +122,28 @@
       ]
     },
     {
-      "id": "proj-m7zarpzjp4ao4",
-      "title": "Test 2",
-      "client": "efs",
-      "priority": "medium",
+      "id": "proj-m7zdl3bskmcnn",
+      "title": "SP-2025-42",
+      "client": "YARD",
+      "priority": "high",
       "status": "Active",
-      "deadline": "2025-04-07",
+      "deadline": "2025-04-11",
       "description": "Naut OSV",
-      "budget": 0,
-      "teamSize": 1,
       "tasks": [],
-      "products": [],
+      "products": [
+        {
+          "productId": "PRD-004",
+          "quantity": 1,
+          "categoryId": "software"
+        },
+        {
+          "productId": "BDL-002",
+          "quantity": 1,
+          "categoryId": "services"
+        }
+      ],
       "completion": 0,
-      "createdAt": "2025-03-07T21:38:12.175Z",
+      "createdAt": "2025-03-07T22:57:01.720Z",
       "createdBy": "Peter",
       "productCategories": [
         {
@@ -166,34 +175,32 @@
         {
           "title": "Product Configuration Change",
           "description": "Modified project products. New total: 1 products.",
-          "date": "2025-03-07T21:38:42.009Z",
+          "date": "2025-03-07T22:57:45.790Z",
+          "author": "Peter"
+        },
+        {
+          "title": "Rev 1",
+          "description": "Added one product only",
+          "date": "2025-03-07T22:57:59.741Z",
           "author": "Peter"
         },
         {
           "title": "Product Configuration Change",
           "description": "Modified project products. New total: 2 products.",
-          "date": "2025-03-07T21:39:03.008Z",
+          "date": "2025-03-07T22:58:29.989Z",
           "author": "Peter"
         },
         {
-          "title": "Product Configuration Change",
-          "description": "Modified project products. New total: 3 products.",
-          "date": "2025-03-07T21:56:42.897Z",
-          "author": "Peter"
-        },
-        {
-          "title": "Product Configuration Change",
-          "description": "Modified project products. New total: 7 products.",
-          "date": "2025-03-07T22:18:13.775Z",
+          "title": "Rev 2",
+          "description": "Added another bundle",
+          "date": "2025-03-07T22:58:47.264Z",
           "author": "Peter"
         }
-      ],
-      "updatedAt": "2025-03-07T22:42:22.944Z",
-      "updatedBy": "Peter"
+      ]
     }
   ],
   "meta": {
-    "updatedAt": "2025-03-07T22:42:22.945Z",
+    "updatedAt": "2025-03-07T22:58:47.264Z",
     "updatedBy": "Peter",
     "version": "1.0"
   }

@@ -3608,8 +3608,7 @@ function populateProjectDetailsModal(project) {
   
   // Completion, budget, etc.
   document.getElementById('details-completion').textContent = `${project.completion || 0}%`;
-  document.getElementById('details-team-size').textContent = project.teamSize || 1;
-  document.getElementById('details-budget').textContent = formatMoney(project.budget || 0);
+  // Team size and budget fields removed
   document.getElementById('details-created-by').textContent = project.createdBy || 'Unknown';
   
   // Description
@@ -5854,8 +5853,6 @@ function openEditProjectModal(project) {
     document.getElementById('project-status').value = project.status || 'Active';
     document.getElementById('project-deadline').value = project.deadline || '';
     document.getElementById('project-description').value = project.description || '';
-    document.getElementById('project-budget').value = project.budget || 0;
-    document.getElementById('project-team-size').value = project.teamSize || 1;
     
     // Clear and populate tasks
     const tasksContainer = document.getElementById('tasks-container');
@@ -5868,16 +5865,8 @@ function openEditProjectModal(project) {
       }
     }
     
-    // Clear and populate products
-    const productsContainer = document.getElementById('project-products-container');
-    if (productsContainer) {
-      productsContainer.innerHTML = '';
-      if (project.products && project.products.length > 0) {
-        project.products.forEach(product => {
-          addProjectProductInput(product);
-        });
-      }
-    }
+    // Products are now managed separately
+    // So we don't need to populate product inputs in the main project form
   }
   
   // Set form title
@@ -5918,8 +5907,6 @@ function initializeProjectForm() {
       const status = document.getElementById('project-status').value;
       const deadline = document.getElementById('project-deadline').value;
       const description = document.getElementById('project-description').value;
-      const budget = parseFloat(document.getElementById('project-budget').value) || 0;
-      const teamSize = parseInt(document.getElementById('project-team-size').value) || 1;
       
       // Get tasks
       const taskInputs = document.querySelectorAll('#tasks-container .task-input');
@@ -5928,21 +5915,20 @@ function initializeProjectForm() {
         completed: false
       })).filter(task => task.text !== '');
       
-      // Get products
-      const productGroups = document.querySelectorAll('#project-products-container .project-product-group');
-      const products = Array.from(productGroups).map(group => {
-        const productSelect = group.querySelector('.project-product-select');
-        const quantityInput = group.querySelector('.project-product-quantity');
-        
-        return {
-          productId: productSelect ? productSelect.value : '',
-          quantity: quantityInput ? parseInt(quantityInput.value, 10) || 1 : 1
-        };
-      }).filter(product => product.productId); // Filter out empty selections
+      // Get existing products if we're editing an existing project
+      let products = [];
       
       // Check if we're editing an existing project or creating a new one
       const saveButton = document.getElementById('save-project');
       const existingProjectId = saveButton ? saveButton.dataset.projectId : null;
+      
+      if (existingProjectId) {
+        const existingProject = projects.find(p => p.id === existingProjectId);
+        if (existingProject && existingProject.products) {
+          // Keep the existing products when editing
+          products = existingProject.products;
+        }
+      }
       let projectData;
       
       if (existingProjectId) {
@@ -5958,8 +5944,6 @@ function initializeProjectForm() {
             status,
             deadline,
             description,
-            budget,
-            teamSize,
             tasks,
             products,
             updatedAt: new Date().toISOString(),
@@ -5984,8 +5968,6 @@ function initializeProjectForm() {
           status,
           deadline,
           description,
-          budget,
-          teamSize,
           tasks,
           products,
           completion: 0,
@@ -6033,13 +6015,13 @@ function initializeProjectForm() {
     });
   }
   
-  // Add product to project button
-  const addProjectProductBtn = document.getElementById('add-project-product');
-  if (addProjectProductBtn) {
-    addProjectProductBtn.addEventListener('click', () => {
-      addProjectProductInput();
-    });
-  }
+  // "Add product to project" button removed from UI
+  // const addProjectProductBtn = document.getElementById('add-project-product');
+  // if (addProjectProductBtn) {
+  //   addProjectProductBtn.addEventListener('click', () => {
+  //     addProjectProductInput();
+  //   });
+  // }
   
   // Close modal when clicking outside
   const projectModal = document.getElementById('project-modal');

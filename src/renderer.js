@@ -2757,9 +2757,147 @@ function refreshProjectsUI() {
   // Clear existing projects
   projectGrid.innerHTML = '';
   
-  // Add all projects
-  projects.forEach(project => {
+  // Add all active projects to the grid
+  const activeProjects = projects.filter(project => 
+    !project.status || project.status === 'active' || project.status === 'Active'
+  );
+  
+  activeProjects.forEach(project => {
     addProjectCardToUI(project);
+  });
+  
+  // Update the upcoming deadlines section with non-active projects
+  updateNonActiveProjectsList();
+}
+
+// Update the Upcoming Deadlines section with non-active status projects
+function updateNonActiveProjectsList() {
+  const upcomingDeadlinesTable = document.querySelector('#dashboard-tab table tbody');
+  if (!upcomingDeadlinesTable) return;
+  
+  // Clear existing rows
+  upcomingDeadlinesTable.innerHTML = '';
+  
+  // Get non-active projects
+  const nonActiveProjects = projects.filter(project => 
+    project.status && project.status !== 'active' && project.status !== 'Active'
+  );
+  
+  // If no non-active projects found, show a message
+  if (nonActiveProjects.length === 0) {
+    upcomingDeadlinesTable.innerHTML = `
+      <tr>
+        <td colspan="6" class="empty-row">
+          <div class="empty-state">
+            <i class="fa fa-info-circle"></i>
+            <p>No projects with non-active status found.</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    
+    // Update the heading to reflect what we're showing
+    const upcomingDeadlinesHeading = document.querySelector('#dashboard-tab h2:nth-of-type(2)');
+    if (upcomingDeadlinesHeading) {
+      upcomingDeadlinesHeading.textContent = 'Non-Active Projects';
+    }
+    
+    return;
+  }
+  
+  // Sort by deadline date (most urgent first)
+  nonActiveProjects.sort((a, b) => {
+    if (!a.deadline) return 1;
+    if (!b.deadline) return -1;
+    return new Date(a.deadline) - new Date(b.deadline);
+  });
+  
+  // Update the heading to reflect what we're showing
+  const upcomingDeadlinesHeading = document.querySelector('#dashboard-tab h2:nth-of-type(2)');
+  if (upcomingDeadlinesHeading) {
+    upcomingDeadlinesHeading.textContent = 'Non-Active Projects';
+  }
+  
+  // Add each non-active project to the table
+  nonActiveProjects.forEach(project => {
+    // Format date for display
+    const deadlineDate = project.deadline ? new Date(project.deadline) : new Date();
+    const formattedDate = deadlineDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    
+    // Create status HTML based on project status
+    let statusHTML = '';
+    const status = project.status || 'Unknown';
+    
+    switch (status.toLowerCase()) {
+      case 'completed':
+        statusHTML = `<span class="status-completed">Completed</span>`;
+        break;
+      case 'on hold':
+        statusHTML = `<span class="status-on-hold">On Hold</span>`;
+        break;
+      case 'cancelled':
+        statusHTML = `<span class="status-cancelled">Cancelled</span>`;
+        break;
+      case 'pending':
+        statusHTML = `<span class="status-pending">Pending</span>`;
+        break;
+      default:
+        statusHTML = `<span class="status-${status.toLowerCase().replace(/\s+/g, '-')}">${status}</span>`;
+    }
+    
+    // Create the row
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="project-cell">
+        <div class="project-info">
+          <span class="project-name">${project.title}</span>
+          <span class="project-client">${project.client || 'No client'}</span>
+        </div>
+      </td>
+      <td>${statusHTML}</td>
+      <td>${project.createdBy || 'Unknown'}</td>
+      <td>${formattedDate}</td>
+      <td>
+        <div class="progress-bar">
+          <div class="progress" style="width: ${project.completion}%"></div>
+        </div>
+      </td>
+      <td>
+        <div class="actions">
+          <button class="btn-icon" data-project-id="${project.id}" data-action="view"><i class="fa fa-eye"></i></button>
+          <button class="btn-icon" data-project-id="${project.id}" data-action="edit"><i class="fa fa-edit"></i></button>
+          <button class="btn-icon" data-project-id="${project.id}" data-action="share"><i class="fa fa-share-alt"></i></button>
+        </div>
+      </td>
+    `;
+    
+    upcomingDeadlinesTable.appendChild(row);
+  });
+  
+  // Add event listeners to action buttons
+  upcomingDeadlinesTable.querySelectorAll('.btn-icon[data-project-id]').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const projectId = button.dataset.projectId;
+      const action = button.dataset.action;
+      
+      const project = projects.find(p => p.id === projectId);
+      if (!project) return;
+      
+      if (action === 'view') {
+        // Show project details (not implemented yet)
+        console.log('View project:', project.title);
+      } else if (action === 'edit') {
+        // Edit project (not implemented yet)
+        console.log('Edit project:', project.title);
+      } else if (action === 'share') {
+        // Share project (not implemented yet)
+        console.log('Share project:', project.title);
+      }
+    });
   });
 }
 
@@ -2779,6 +2917,7 @@ function initializeProjectForm() {
       const name = document.getElementById('project-name').value;
       const client = document.getElementById('project-client').value;
       const priority = document.getElementById('project-priority').value;
+      const status = document.getElementById('project-status').value;
       const deadline = document.getElementById('project-deadline').value;
       const description = document.getElementById('project-description').value;
       const budget = parseFloat(document.getElementById('project-budget').value) || 0;
@@ -2797,6 +2936,7 @@ function initializeProjectForm() {
         title: name,
         client,
         priority,
+        status,
         deadline,
         description,
         budget,

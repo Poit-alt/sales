@@ -26,7 +26,7 @@
             <li><a href="#" data-tab="products"><i class="fa fa-cubes"></i> <span>Products</span></a></li>
             <li><a href="#"><i class="fa fa-file-text"></i> <span>Documents</span></a></li>
             <li class="divider"></li>
-            <li><a href="#"><i class="fa fa-cog"></i> <span>Settings</span></a></li>
+            <li><a href="#" data-tab="settings"><i class="fa fa-cog"></i> <span>Settings</span></a></li>
             <li><a href="#"><i class="fa fa-question-circle"></i> <span>Help</span></a></li>
           </ul>
           
@@ -45,9 +45,9 @@
       
       <section class="content">
         <div class="content-header">
-          <h1>Project Dashboard</h1>
+          <h1 id="content-title">Project Dashboard</h1>
           <div class="content-actions">
-            <button class="button"><i class="fa fa-plus"></i> New Project</button>
+            <button class="button" id="header-action-button"><i class="fa fa-plus"></i> New Project</button>
           </div>
         </div>
         
@@ -367,6 +367,55 @@
             <button id="prev-page" class="pagination-btn" disabled><i class="fa fa-chevron-left"></i> Previous</button>
             <span id="page-info">Page 1 of 1</span>
             <button id="next-page" class="pagination-btn" disabled>Next <i class="fa fa-chevron-right"></i></button>
+          </div>
+          
+        </div>
+        
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settings-tab">
+          <div class="settings-container">
+            <div class="settings-section">
+              <h2>User Settings</h2>
+              <div class="settings-group">
+                <label for="user-name">Your Name</label>
+                <div class="settings-control">
+                  <input type="text" id="user-name" placeholder="Enter your name">
+                  <p class="settings-help">This name will appear when you make changes to products, such as price updates.</p>
+                </div>
+              </div>
+              
+              <div class="settings-group">
+                <label for="user-role">Role</label>
+                <div class="settings-control">
+                  <select id="user-role">
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="settings-actions">
+                <button id="save-user-settings" class="button">Save User Settings</button>
+              </div>
+            </div>
+            
+            <div class="settings-section">
+              <h2>Application Settings</h2>
+              <div class="settings-group">
+                <label>Theme</label>
+                <div class="settings-control settings-theme-selector">
+                  <button class="theme-button" data-theme="light">
+                    <div class="theme-preview light"></div>
+                    <span>Light</span>
+                  </button>
+                  <button class="theme-button" data-theme="dark">
+                    <div class="theme-preview dark"></div>
+                    <span>Dark</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -6,8 +6,8 @@
       "description": "Complete business solution with accounting, project management, and document handling",
       "category": "Bundle",
       "subCategory": "Business Suite",
-      "price": 200,
-      "regularPrice": 9288,
+      "price": 500,
+      "regularPrice": 6888,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -25,6 +25,13 @@
           "regularPrice": 9288,
           "currency": "USD",
           "changedBy": "admin"
+        },
+        {
+          "date": "2025-03-07T19:12:25.117Z",
+          "price": 500,
+          "currency": "USD",
+          "changedBy": "Peter",
+          "regularPrice": 6888
         }
       ],
       "stockStatus": {

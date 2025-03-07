@@ -20,6 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
+  // Check settings tab 
+  const settingsTab = document.getElementById('settings-tab');
+  if (settingsTab) {
+    console.log('Settings tab found in DOM:', settingsTab);
+    console.log('Settings tab HTML:', settingsTab.innerHTML.substring(0, 100) + '...');
+  } else {
+    console.error('Settings tab element not found in DOM!');
+  }
+  
   // Detect platform and add appropriate class to body
   // This will be used for platform-specific styling
   if (window.electron && window.electron.platform) {
@@ -130,9 +139,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // We're now using CSS to toggle the visibility of the two icons
   // No need to change icon classes dynamically
   
+  // Load user settings on startup
+  loadUserSettings();
+  
+  // Debug: Initialize settings menu functionality
+  window.switchToSettingsTab = function() {
+    console.log('Manually switching to settings tab');
+    const settingsLink = document.querySelector('.sidebar-nav a[data-tab="settings"]');
+    if (settingsLink) {
+      settingsLink.click();
+    } else {
+      console.error('Settings tab link not found');
+    }
+  };
+  
   // Tab navigation via sidebar
   const sidebarLinks = document.querySelectorAll('.sidebar-nav a[data-tab]');
   const tabContents = document.querySelectorAll('.tab-content');
+  
+  // Debug: List all available tabs
+  console.log('Available tabs:', Array.from(tabContents).map(tab => tab.id));
   
   sidebarLinks.forEach(link => {
     link.addEventListener('click', (e) => {
@@ -140,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const target = link.dataset.tab;
       
       console.log(`Tab clicked: ${target}`);
+      console.log(`Looking for tab element with ID: ${target}-tab`);
       
       // Remove active class from all links and contents
       sidebarLinks.forEach(l => l.classList.remove('active'));
@@ -155,10 +182,30 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error(`Tab element not found: ${target}-tab`);
       }
       
-      // Update header text based on selected tab
-      const contentHeader = document.querySelector('.content-header h1');
-      if (contentHeader) {
-        contentHeader.textContent = target === 'dashboard' ? 'Project Dashboard' : 'Product Catalog';
+      // Update header text and action button based on selected tab
+      const contentTitle = document.getElementById('content-title');
+      const headerActionButton = document.getElementById('header-action-button');
+      
+      if (contentTitle) {
+        // Set appropriate title for each tab
+        if (target === 'dashboard') {
+          contentTitle.textContent = 'Project Dashboard';
+          if (headerActionButton) {
+            headerActionButton.innerHTML = '<i class="fa fa-plus"></i> New Project';
+            headerActionButton.style.display = 'block';
+          }
+        } else if (target === 'products') {
+          contentTitle.textContent = 'Product Catalog';
+          if (headerActionButton) {
+            headerActionButton.innerHTML = '<i class="fa fa-plus"></i> New Product';
+            headerActionButton.style.display = 'block';
+          }
+        } else if (target === 'settings') {
+          contentTitle.textContent = 'Settings';
+          if (headerActionButton) {
+            headerActionButton.style.display = 'none'; // Hide action button on settings page
+          }
+        }
       }
       
       // Move db-path-container based on selected tab
@@ -1578,7 +1625,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: new Date().toISOString(),
         price: updatedProduct.price,
         currency: updatedProduct.currency,
-        changedBy: "user" // In a real app, this would be the current user's ID or name
+        changedBy: getCurrentUserName() // Get the user's name from settings
       };
       
       // Add bundle specific price data if applicable
@@ -1843,4 +1890,150 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Products tab link not found');
     }
   }
+  
+  // Handle saving user settings
+  const saveUserSettingsBtn = document.getElementById('save-user-settings');
+  if (saveUserSettingsBtn) {
+    saveUserSettingsBtn.addEventListener('click', () => {
+      saveUserSettings();
+    });
+  }
+  
+  // Initialize theme buttons based on current theme
+  const themeButtons = document.querySelectorAll('.theme-button');
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  
+  themeButtons.forEach(button => {
+    // Set active class on the button matching the current theme
+    if (button.dataset.theme === currentTheme) {
+      button.classList.add('active');
+    }
+    
+    // Add click handler to change theme
+    button.addEventListener('click', () => {
+      const newTheme = button.dataset.theme;
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      
+      // Update active class
+      themeButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+    });
+  });
 });
+
+// Functions for user settings
+
+// Save user settings to localStorage
+function saveUserSettings() {
+  const userName = document.getElementById('user-name').value.trim();
+  const userRole = document.getElementById('user-role').value;
+  
+  if (userName) {
+    const userSettings = {
+      name: userName,
+      role: userRole,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    localStorage.setItem('userSettings', JSON.stringify(userSettings));
+    
+    // Show success message
+    showNotification('User settings saved successfully', 'success');
+  } else {
+    // Show error message if name is empty
+    showNotification('Please enter your name', 'error');
+  }
+}
+
+// Load user settings from localStorage
+function loadUserSettings() {
+  const userNameInput = document.getElementById('user-name');
+  const userRoleSelect = document.getElementById('user-role');
+  
+  if (!userNameInput || !userRoleSelect) return;
+  
+  // Get saved settings from localStorage
+  const savedSettings = localStorage.getItem('userSettings');
+  if (savedSettings) {
+    try {
+      const settings = JSON.parse(savedSettings);
+      userNameInput.value = settings.name || '';
+      
+      // Set role dropdown if it exists in saved settings
+      if (settings.role && userRoleSelect.querySelector(`option[value="${settings.role}"]`)) {
+        userRoleSelect.value = settings.role;
+      }
+    } catch (err) {
+      console.error('Error loading user settings:', err);
+    }
+  }
+}
+
+// Get current user name
+function getCurrentUserName() {
+  const savedSettings = localStorage.getItem('userSettings');
+  if (savedSettings) {
+    try {
+      const settings = JSON.parse(savedSettings);
+      return settings.name || 'Anonymous';
+    } catch (err) {
+      console.error('Error reading user settings:', err);
+      return 'Anonymous';
+    }
+  }
+  return 'Anonymous';
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  
+  // Add icon based on type
+  let icon = 'info-circle';
+  if (type === 'success') icon = 'check-circle';
+  if (type === 'error') icon = 'exclamation-triangle';
+  if (type === 'warning') icon = 'exclamation-circle';
+  
+  notification.innerHTML = `
+    <i class="fa fa-${icon}"></i>
+    <div class="notification-message">${message}</div>
+    <button class="notification-close"><i class="fa fa-times"></i></button>
+  `;
+  
+  // Add to the page
+  document.body.appendChild(notification);
+  
+  // Animate in
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+  
+  // Set up close button
+  const closeBtn = notification.querySelector('.notification-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      closeNotification(notification);
+    });
+  }
+  
+  // Auto close after a delay
+  setTimeout(() => {
+    closeNotification(notification);
+  }, 5000);
+}
+
+// Close notification
+function closeNotification(notification) {
+  notification.classList.remove('show');
+  notification.classList.add('hiding');
+  
+  // Remove from DOM after animation
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 300);
+}

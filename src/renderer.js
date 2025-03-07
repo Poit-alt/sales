@@ -566,10 +566,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Filter products
     filteredProducts = allProducts.filter(product => {
-      // Check if product name or description contains search term
+      // Check if product id, name or description contains search term
+      const idMatch = product.id && product.id.toLowerCase().includes(searchTerm);
       const nameMatch = product.name && product.name.toLowerCase().includes(searchTerm);
       const descMatch = product.description && product.description.toLowerCase().includes(searchTerm);
-      const searchMatch = nameMatch || descMatch;
+      const searchMatch = idMatch || nameMatch || descMatch;
       
       // Check if product matches category filter
       const categoryMatch = !categoryValue || 
@@ -1028,10 +1029,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="bundle-item-details">
         <div class="bundle-item-detail">
           <label>Product</label>
-          <select class="bundle-item-product-select">
-            <option value="">Select a product</option>
-            ${generateProductOptionsHTML(productId)}
-          </select>
+          <div class="product-select-wrapper">
+            <input type="text" class="bundle-item-product-search" placeholder="Search for product by ID or name...">
+            <div class="product-suggestions"></div>
+            <input type="hidden" class="bundle-item-product-select" value="${productId}">
+          </div>
         </div>
         <div class="bundle-item-detail">
           <label>Quantity</label>
@@ -1054,12 +1056,59 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    // Add product select change handler
+    // Add product search functionality
+    const productSearch = bundleItemContainer.querySelector('.bundle-item-product-search');
     const productSelect = bundleItemContainer.querySelector('.bundle-item-product-select');
-    if (productSelect) {
-      productSelect.addEventListener('change', () => {
-        updateBundleItemPreview(bundleItemContainer);
-        updateBundlePriceInfo();
+    
+    if (productSearch && productSelect) {
+      // Initialize search with product name if a product is already selected
+      if (productId) {
+        const selectedProduct = findProductById(productId);
+        if (selectedProduct) {
+          productSearch.value = `${selectedProduct.id} - ${selectedProduct.name}`;
+        }
+      }
+      
+      // Get suggestion container
+      const suggestionsContainer = bundleItemContainer.querySelector('.product-suggestions');
+      
+      // Use debounce to prevent filtering on every keystroke
+      let searchTimeout;
+      productSearch.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        
+        // Only filter after user stops typing for 200ms
+        searchTimeout = setTimeout(() => {
+          const searchTerm = productSearch.value.toLowerCase();
+          
+          // Check if it might be an ID search (no spaces, alphanumeric)
+          const isLikelyIdSearch = /^[a-z0-9\-_]+$/.test(searchTerm);
+          
+          if (isLikelyIdSearch && searchTerm.length >= 1) {
+            // If it looks like an ID search, allow shorter search terms
+            showSuggestions(searchTerm, suggestionsContainer, productSelect, productSearch, bundleItemContainer, true);
+          } else if (searchTerm.length >= 2) {
+            // Show suggestions when search term is at least 2 characters
+            showSuggestions(searchTerm, suggestionsContainer, productSelect, productSearch, bundleItemContainer);
+          } else {
+            // Hide suggestions
+            suggestionsContainer.classList.remove('show');
+            suggestionsContainer.innerHTML = '';
+          }
+        }, 200);
+      });
+      
+      // Handle click outside to close suggestions
+      document.addEventListener('click', (e) => {
+        if (!productSearch.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+          suggestionsContainer.classList.remove('show');
+        }
+      });
+      
+      // Make it easy to choose from the dropdown after filtering
+      productSearch.addEventListener('click', () => {
+        // Select all text for easy replacement
+        productSearch.select();
       });
     }
     
@@ -1080,16 +1129,119 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBundlePriceInfo();
   }
   
-  // Generate HTML for product options
-  function generateProductOptionsHTML(selectedProductId = '') {
-    // Filter out bundle products from the options to prevent circular references
+  // Function removed as we no longer need to filter dropdown options
+  
+  // Show suggestions based on search term
+  function showSuggestions(searchTerm, suggestionsContainer, productSelect, productSearch, bundleItemContainer, isIdSearch = false) {
+    if (!suggestionsContainer) return;
+    
+    // Clear previous suggestions
+    suggestionsContainer.innerHTML = '';
+    
+    // Add ID search hint
+    if (isIdSearch && searchTerm.length === 1) {
+      const hintEl = document.createElement('div');
+      hintEl.className = 'search-hint';
+      hintEl.innerHTML = '<i class="fa fa-info-circle"></i> Continue typing to search by Product ID';
+      suggestionsContainer.appendChild(hintEl);
+      suggestionsContainer.classList.add('show');
+      return;
+    }
+    
+    // Filter out bundle products from suggestions
     const regularProducts = allProducts.filter(product => !product.isBundle);
     
-    return regularProducts.map(product => {
-      const selected = product.id === selectedProductId ? 'selected' : '';
-      return `<option value="${product.id}" ${selected}>${product.name}</option>`;
-    }).join('');
+    // Find matching products (max 8 suggestions)
+    // First try exact ID match
+    let exactIdMatch = regularProducts.find(product => 
+      product.id.toLowerCase() === searchTerm
+    );
+    
+    // Then look for partial matches
+    const matchingProducts = regularProducts.filter(product => {
+      // Skip exact match as we'll add it at the top
+      if (exactIdMatch && product.id === exactIdMatch.id) return false;
+      
+      const idMatch = product.id.toLowerCase().includes(searchTerm);
+      const nameMatch = product.name.toLowerCase().includes(searchTerm);
+      return idMatch || nameMatch;
+    }).slice(0, exactIdMatch ? 7 : 8); // Leave room for exact match if found
+    
+    // Add exact match at the beginning if found
+    if (exactIdMatch) {
+      matchingProducts.unshift(exactIdMatch);
+    }
+    
+    if (matchingProducts.length > 0) {
+      // Create suggestion elements
+      matchingProducts.forEach(product => {
+        const suggestionEl = document.createElement('div');
+        
+        // Check if this is an exact ID match
+        const isExactMatch = product.id.toLowerCase() === searchTerm;
+        suggestionEl.className = isExactMatch ? 'product-suggestion exact-match' : 'product-suggestion';
+        
+        // Highlight matching parts
+        const idHtml = highlightMatch(product.id, searchTerm);
+        const nameHtml = highlightMatch(product.name, searchTerm);
+        
+        // Format price
+        const priceDisplay = formatPrice(product.price, product.currency);
+        
+        suggestionEl.innerHTML = `
+          <span class="product-suggestion-id">${idHtml}</span> - 
+          <span class="product-suggestion-name">${nameHtml}</span>
+          <div class="product-suggestion-price">${priceDisplay}</div>
+          ${isExactMatch ? '<div class="exact-match-indicator">Exact ID Match</div>' : ''}
+        `;
+        
+        // Handle click on suggestion
+        suggestionEl.addEventListener('click', () => {
+          // Update hidden input with product ID
+          productSelect.value = product.id;
+          
+          // Update the search field
+          productSearch.value = `${product.id} - ${product.name}`;
+          
+          // Hide suggestions
+          suggestionsContainer.classList.remove('show');
+          
+          // Update the UI
+          updateBundleItemPreview(bundleItemContainer);
+          updateBundlePriceInfo();
+        });
+        
+        suggestionsContainer.appendChild(suggestionEl);
+      });
+      
+      // Show suggestions
+      suggestionsContainer.classList.add('show');
+    } else {
+      // No matches, hide suggestions
+      suggestionsContainer.classList.remove('show');
+    }
   }
+  
+  // Highlight matching parts of text
+  function highlightMatch(text, searchTerm) {
+    if (!text) return '';
+    
+    const lowerText = text.toLowerCase();
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    
+    if (!lowerText.includes(lowerSearchTerm)) return text;
+    
+    const startIndex = lowerText.indexOf(lowerSearchTerm);
+    const endIndex = startIndex + lowerSearchTerm.length;
+    
+    return (
+      text.substring(0, startIndex) +
+      `<span class="product-suggestion-highlight">${text.substring(startIndex, endIndex)}</span>` +
+      text.substring(endIndex)
+    );
+  }
+  
+  // Function removed as we no longer need to generate dropdown options
   
   // Update bundle item preview
   function updateBundleItemPreview(bundleItemContainer) {

@@ -1403,6 +1403,114 @@ tr:hover {
   width: 100%;
 }
 
+.product-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.bundle-item-product-search {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.bundle-item-product-search:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
+  outline: none;
+}
+
+.bundle-item-product-select {
+  display: none; /* Hidden since we're using only the search now */
+}
+
+.product-suggestions {
+  display: none;
+  position: absolute;
+  width: 100%;
+  max-height: 250px;
+  overflow-y: auto;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  z-index: 100;
+  box-shadow: 0 4px 12px var(--shadow);
+  margin-top: 4px;
+}
+
+.product-suggestions.show {
+  display: block;
+}
+
+.product-suggestion {
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid var(--border);
+}
+
+.product-suggestion:last-child {
+  border-bottom: none;
+}
+
+.product-suggestion:hover {
+  background-color: rgba(var(--accent-rgb), 0.1);
+}
+
+.product-suggestion.exact-match {
+  background-color: rgba(var(--accent-rgb), 0.05);
+}
+
+.exact-match-indicator {
+  font-size: 0.7rem;
+  background-color: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.search-hint {
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background-color: rgba(var(--accent-rgb), 0.03);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.search-hint i {
+  margin-right: 5px;
+  color: var(--accent);
+}
+
+.product-suggestion-id {
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.product-suggestion-name {
+  color: var(--text-primary);
+}
+
+.product-suggestion-price {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.product-suggestion-highlight {
+  background-color: rgba(var(--accent-rgb), 0.15);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
 .bundle-fields {
   background-color: rgba(var(--accent-rgb), 0.03);
   border-radius: 8px;

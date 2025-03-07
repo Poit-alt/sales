@@ -7,7 +7,7 @@
       "category": "Bundle",
       "subCategory": "Business Suite",
       "price": 200,
-      "regularPrice": 2097,
+      "regularPrice": 9288,
       "currency": "USD",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -23,12 +23,12 @@
           "quantity": 1
         },
         {
-          "productId": "PRD-006",
-          "quantity": 1
+          "productId": "PRD-010",
+          "quantity": 5
         },
         {
-          "productId": "PRD-010",
-          "quantity": 1
+          "productId": "PRD-001",
+          "quantity": 6
         }
       ],
       "bundleSavings": "14% compared to buying separately",

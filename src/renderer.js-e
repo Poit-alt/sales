@@ -1,24 +1,7 @@
 // This file contains the code that runs in the renderer process
 
-// Global product data array
-let allProducts = [];
-
-// Find a product by its ID (global function)
-function findProductById(productId) {
-  // Check if we have product data
-  if (typeof allProducts === 'undefined' || !allProducts || !Array.isArray(allProducts)) {
-    console.error('Product data not available');
-    return null;
-  }
-  
-  return allProducts.find(product => product && product.id === productId);
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded');
-  
-  // Initialize product categories in settings
-  initializeProductCategoriesSettings();
   
   // Add console log to debug tab navigation
   console.log('Tabs setup:', {
@@ -267,10 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const nextPageBtn = document.getElementById('next-page');
   const pageInfo = document.getElementById('page-info');
   
-  // Initialize the products state if needed
-  if (typeof allProducts === 'undefined') {
-    allProducts = [];
-  }
+  // Product data state
+  let allProducts = [];
   let filteredProducts = [];
   let categories = new Set();
   let currentPage = 1;
@@ -917,7 +898,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Use the global findProductById function
+  // Find a product by its ID
+  function findProductById(productId) {
+    // Check if we have product data
+    if (typeof allProducts === 'undefined' || !allProducts || !Array.isArray(allProducts)) {
+      // Since we need the result immediately, we can't wait for an async load
+      console.error('Product data not available');
+      return null;
+    }
+    
+    return allProducts.find(product => product && product.id === productId);
+  }
   
   // Modal functionality
   const productModal = document.getElementById('product-modal');
@@ -2012,14 +2003,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Handle saving product categories
-  const saveCategoriesBtn = document.getElementById('save-categories');
-  if (saveCategoriesBtn) {
-    saveCategoriesBtn.addEventListener('click', () => {
-      saveProductCategories();
-    });
-  }
-  
   // Initialize theme buttons based on current theme
   const themeButtons = document.querySelectorAll('.theme-button');
   const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -2065,58 +2048,6 @@ function saveUserSettings() {
     // Show error message if name is empty
     showNotification('Please enter your name', 'error');
   }
-}
-
-// Default product categories
-const defaultProductCategories = [
-  { id: 'hardware', name: 'Hardware', order: 0 },
-  { id: 'software', name: 'Software', order: 1 },
-  { id: 'services', name: 'Services', order: 2 }
-];
-
-// Save product categories
-function saveProductCategories() {
-  const categoriesList = document.getElementById('product-categories-list');
-  if (!categoriesList) return;
-  
-  // Collect categories from the UI
-  const categoryItems = categoriesList.querySelectorAll('.category-item');
-  const categories = Array.from(categoryItems).map((item, index) => ({
-    id: item.dataset.id || generateCategoryId(),
-    name: item.querySelector('.category-title').textContent,
-    order: index
-  }));
-  
-  // Save to localStorage
-  localStorage.setItem('productCategories', JSON.stringify(categories));
-  
-  // Show success message
-  showNotification('Product categories saved successfully', 'success');
-  
-  return categories;
-}
-
-// Generate a unique ID for categories
-function generateCategoryId() {
-  return 'cat-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-}
-
-// Load product categories
-function loadProductCategories() {
-  // Try to load from localStorage
-  const savedCategories = localStorage.getItem('productCategories');
-  
-  if (savedCategories) {
-    try {
-      return JSON.parse(savedCategories);
-    } catch (err) {
-      console.error('Error parsing saved categories:', err);
-      return defaultProductCategories;
-    }
-  }
-  
-  // Return defaults if no saved categories
-  return defaultProductCategories;
 }
 
 // Load user settings from localStorage
@@ -2590,8 +2521,6 @@ function showProjectProductSuggestions(searchTerm, suggestionsContainer, product
     }
   }
 }
-
-// Using the global findProductById function defined at the top of the file
 
 // Format price with currency
 function formatPrice(price, currency = 'USD') {
@@ -3807,368 +3736,94 @@ function activateTab(tabId) {
   if (selectedContent) selectedContent.classList.add('active');
 }
 
-// Initialize product categories in settings
-function initializeProductCategoriesSettings() {
-  const categoriesList = document.getElementById('product-categories-list');
-  const addCategoryBtn = document.getElementById('add-category-btn');
-  const newCategoryInput = document.getElementById('new-category-input');
-  
-  if (!categoriesList || !addCategoryBtn || !newCategoryInput) return;
-  
-  // Load and render product categories
-  renderCategoriesInSettings();
-  
-  // Add new category button
-  addCategoryBtn.addEventListener('click', () => {
-    const categoryName = newCategoryInput.value.trim();
-    if (!categoryName) return;
-    
-    addCategoryToSettings(categoryName);
-    newCategoryInput.value = '';
-    newCategoryInput.focus();
-  });
-  
-  // Add new category on Enter key
-  newCategoryInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      addCategoryBtn.click();
-    }
-  });
-}
-
-// Render categories in settings
-function renderCategoriesInSettings() {
-  const categoriesList = document.getElementById('product-categories-list');
-  if (!categoriesList) return;
-  
-  // Clear existing items
-  categoriesList.innerHTML = '';
-  
-  // Load categories
-  const categories = loadProductCategories();
-  
-  // Sort categories by their order
-  categories.sort((a, b) => a.order - b.order);
-  
-  // Render each category
-  categories.forEach(category => {
-    addCategoryToSettings(category.name, category.id);
-  });
-  
-  // Setup drag and drop for category reordering
-  setupCategoryDragDrop();
-}
-
-// Add a category item to the settings UI
-function addCategoryToSettings(categoryName, categoryId = null) {
-  const categoriesList = document.getElementById('product-categories-list');
-  if (!categoriesList) return;
-  
-  const categoryItem = document.createElement('div');
-  categoryItem.className = 'category-item';
-  categoryItem.draggable = true;
-  
-  // Generate a new ID if one wasn't provided
-  const id = categoryId || generateCategoryId();
-  categoryItem.dataset.id = id;
-  
-  categoryItem.innerHTML = `
-    <div class="category-drag-handle">
-      <i class="fa fa-bars"></i>
-    </div>
-    <div class="category-title">${categoryName}</div>
-    <div class="category-actions">
-      <button class="btn-icon edit-category" title="Edit category">
-        <i class="fa fa-pencil"></i>
-      </button>
-      <button class="btn-icon remove-category" title="Remove category">
-        <i class="fa fa-trash"></i>
-      </button>
-    </div>
-  `;
-  
-  // Set up edit button
-  const editBtn = categoryItem.querySelector('.edit-category');
-  editBtn.addEventListener('click', () => {
-    const titleElement = categoryItem.querySelector('.category-title');
-    const currentName = titleElement.textContent;
-    
-    // Create an input for editing
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = currentName;
-    input.className = 'category-edit-input';
-    
-    // Replace the title with the input
-    titleElement.innerHTML = '';
-    titleElement.appendChild(input);
-    input.focus();
-    input.select();
-    
-    // Event listener for Enter key and blur
-    const saveEdit = () => {
-      const newName = input.value.trim();
-      if (newName) {
-        titleElement.textContent = newName;
-      } else {
-        titleElement.textContent = currentName;
-      }
-    };
-    
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        saveEdit();
-      }
-    });
-    
-    input.addEventListener('blur', saveEdit);
-  });
-  
-  // Set up remove button
-  const removeBtn = categoryItem.querySelector('.remove-category');
-  removeBtn.addEventListener('click', () => {
-    if (confirm(`Are you sure you want to remove the "${categoryName}" category?`)) {
-      categoryItem.remove();
-    }
-  });
-  
-  // Add to list
-  categoriesList.appendChild(categoryItem);
-}
-
-// Set up drag and drop for category reordering
-function setupCategoryDragDrop() {
-  const categoriesList = document.getElementById('product-categories-list');
-  if (!categoriesList) return;
-  
-  const categoryItems = categoriesList.querySelectorAll('.category-item');
-  
-  categoryItems.forEach(item => {
-    item.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', item.dataset.id);
-      item.classList.add('dragging');
-      
-      // Set a delay for visual feedback
-      setTimeout(() => {
-        item.style.opacity = '0.4';
-      }, 0);
-    });
-    
-    item.addEventListener('dragend', () => {
-      item.classList.remove('dragging');
-      item.style.opacity = '1';
-    });
-    
-    item.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      const dragging = document.querySelector('.dragging');
-      if (dragging && dragging !== item) {
-        const box = item.getBoundingClientRect();
-        const offset = e.clientY - box.top;
-        
-        if (offset < box.height / 2) {
-          // Insert before
-          categoriesList.insertBefore(dragging, item);
-        } else {
-          // Insert after
-          categoriesList.insertBefore(dragging, item.nextSibling);
-        }
-      }
-    });
-  });
-}
-
-// Populate the Products Tab with categorized products
+// Populate the Products Tab
 function populateProductsTab(project) {
   const productsEl = document.getElementById('details-products');
-  const categoriesEl = document.getElementById('details-product-categories');
-  
-  if (!productsEl || !categoriesEl) return;
-  
-  // Clear existing content
   productsEl.innerHTML = '';
-  categoriesEl.innerHTML = '';
   
   let totalValue = 0;
-  let totalProducts = 0;
   
-  // Initialize or get project categories
-  if (!project.productCategories) {
-    // Use default categories from settings if none are defined for this project
-    project.productCategories = loadProductCategories().map(cat => ({
-      ...cat,
-      expanded: true
-    }));
-  }
-  
-  // Sort categories by order
-  project.productCategories.sort((a, b) => a.order - b.order);
-  
-  // Update category count display
-  const categoryCountDisplay = document.getElementById('category-count-display');
-  if (categoryCountDisplay) {
-    const count = project.productCategories.length;
-    categoryCountDisplay.textContent = `${count} ${count === 1 ? 'category' : 'categories'}`;
-  }
-  
-  // Create categories
-  project.productCategories.forEach(category => {
-    const categoryEl = document.createElement('div');
-    categoryEl.className = 'project-product-category';
-    categoryEl.dataset.categoryId = category.id;
-    
-    // Create category header
-    const headerEl = document.createElement('div');
-    headerEl.className = 'category-header';
-    headerEl.innerHTML = `
-      <div class="category-name">
-        <i class="fa fa-folder${category.expanded ? '-open' : ''}"></i>
-        ${category.name}
-      </div>
-      <div class="category-actions">
-        <button class="btn-icon toggle-category" title="${category.expanded ? 'Collapse' : 'Expand'} category">
-          <i class="fa fa-${category.expanded ? 'chevron-up' : 'chevron-down'}"></i>
-        </button>
-        <button class="btn-icon add-product-to-category" title="Add product to this category">
-          <i class="fa fa-plus"></i>
-        </button>
-        <button class="btn-icon move-category-up" title="Move category up">
-          <i class="fa fa-arrow-up"></i>
-        </button>
-        <button class="btn-icon move-category-down" title="Move category down">
-          <i class="fa fa-arrow-down"></i>
-        </button>
-        <button class="btn-icon remove-category" title="Remove category">
-          <i class="fa fa-trash"></i>
-        </button>
-      </div>
-    `;
-    
-    // Add toggle functionality
-    const toggleBtn = headerEl.querySelector('.toggle-category');
-    toggleBtn.addEventListener('click', () => {
-      category.expanded = !category.expanded;
-      toggleCategoryExpansion(categoryEl, category.expanded);
-    });
-    
-    // Add product to category button
-    const addProductBtn = headerEl.querySelector('.add-product-to-category');
-    addProductBtn.addEventListener('click', () => {
-      showAddProductModal(project, category.id);
-    });
-    
-    // Move category up button
-    const moveUpBtn = headerEl.querySelector('.move-category-up');
-    moveUpBtn.addEventListener('click', () => {
-      moveCategoryUp(category.id);
-    });
-    
-    // Move category down button
-    const moveDownBtn = headerEl.querySelector('.move-category-down');
-    moveDownBtn.addEventListener('click', () => {
-      moveCategoryDown(category.id);
-    });
-    
-    // Remove category button
-    const removeBtn = headerEl.querySelector('.remove-category');
-    removeBtn.addEventListener('click', () => {
-      if (confirm(`Are you sure you want to remove the "${category.name}" category?`)) {
-        removeCategory(category.id);
-      }
-    });
-    
-    // Create category products container
-    const productsContainerEl = document.createElement('div');
-    productsContainerEl.className = 'category-products';
-    productsContainerEl.style.display = category.expanded ? 'block' : 'none';
-    
-    // Filter products for this category
-    const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
-    totalProducts += categoryProducts.length;
-    
-    // If no products in this category, show empty message
-    if (categoryProducts.length === 0) {
-      productsContainerEl.innerHTML = `
-        <div class="empty-category">No products in this category</div>
-        <div class="category-drop-zone" data-category-id="${category.id}">
-          Drop products here
-        </div>
-      `;
-    } else {
-      // Add products to this category
-      categoryProducts.forEach((product, index) => {
-        const productEl = createProductElement(product, index, totalValue);
-        if (productEl) {
-          productsContainerEl.appendChild(productEl);
-        }
-      });
+  if (project.products && project.products.length > 0) {
+    project.products.forEach((product, index) => {
+      const productDetails = findProductById(product.productId);
       
-      // Add drop zone after products
-      const dropZone = document.createElement('div');
-      dropZone.className = 'category-drop-zone';
-      dropZone.dataset.categoryId = category.id;
-      dropZone.textContent = 'Drop products here';
-      productsContainerEl.appendChild(dropZone);
-    }
-    
-    // Assemble the category element
-    categoryEl.appendChild(headerEl);
-    categoryEl.appendChild(productsContainerEl);
-    
-    // Add to categories container
-    categoriesEl.appendChild(categoryEl);
-  });
-  
-  // Handle any uncategorized products
-  const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
-  
-  // Update product count display
-  const productCountDisplay = document.getElementById('product-count-display');
-  if (productCountDisplay) {
-    const count = (project.products || []).length;
-    productCountDisplay.textContent = `${count} ${count === 1 ? 'product' : 'products'}`;
-  }
-  
-  if (uncategorizedProducts.length > 0) {
-    totalProducts += uncategorizedProducts.length;
-    
-    productsEl.innerHTML = '<h3>Uncategorized Products</h3>';
-    
-    // Create container for uncategorized products
-    const uncategorizedContainer = document.createElement('div');
-    uncategorizedContainer.className = 'uncategorized-products';
-    
-    uncategorizedProducts.forEach((product, index) => {
-      const productEl = createProductElement(product, index, totalValue);
-      if (productEl) {
-        // Make draggable for categorization
-        productEl.draggable = true;
+      if (productDetails) {
+        const totalPrice = productDetails.price * product.quantity;
+        totalValue += totalPrice;
         
-        productEl.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('product-index', index.toString());
-          e.dataTransfer.setData('product-category', 'uncategorized');
-          productEl.classList.add('dragging');
-        });
+        const productItem = document.createElement('div');
+        productItem.className = 'product-item';
+        productItem.dataset.index = index;
         
-        productEl.addEventListener('dragend', () => {
-          productEl.classList.remove('dragging');
-        });
+        productItem.innerHTML = `
+          <div class="product-item-header">
+            <div class="product-item-name">${productDetails.name}</div>
+            <div class="product-actions">
+              <div class="product-item-quantity">${product.quantity}x</div>
+              <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="product-item-details">
+            <div class="product-item-id">${productDetails.id}</div>
+            <div class="product-item-price">
+              ${product.quantity} x ${formatPrice(productDetails.price, productDetails.currency)} = 
+              ${formatPrice(totalPrice, productDetails.currency)}
+            </div>
+          </div>
+        `;
         
-        uncategorizedContainer.appendChild(productEl);
+        // Add event listener for remove button
+        const removeButton = productItem.querySelector('.remove-product');
+        if (removeButton) {
+          removeButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeProductFromProject(index);
+          });
+        }
+        
+        productsEl.appendChild(productItem);
+      } else {
+        // Product not found
+        const productItem = document.createElement('div');
+        productItem.className = 'product-item';
+        productItem.dataset.index = index;
+        
+        productItem.innerHTML = `
+          <div class="product-item-header">
+            <div class="product-item-name">Unknown Product</div>
+            <div class="product-actions">
+              <div class="product-item-quantity">${product.quantity}x</div>
+              <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="product-item-details">
+            <div class="product-item-id">${product.productId}</div>
+            <div class="product-item-price">Product not found</div>
+          </div>
+        `;
+        
+        // Add event listener for remove button
+        const removeButton = productItem.querySelector('.remove-product');
+        if (removeButton) {
+          removeButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeProductFromProject(index);
+          });
+        }
+        
+        productsEl.appendChild(productItem);
       }
     });
     
-    productsEl.appendChild(uncategorizedContainer);
-  } else if ((project.products || []).length === 0) {
-    productsEl.innerHTML = '<div class="empty-message">No products for this project</div>';
-  } else {
-    productsEl.innerHTML = '<div class="empty-message">All products are categorized</div>';
-  }
-  
-  // Show total value
-  const totalEl = document.getElementById('details-products-total-bar');
-  if (totalEl) {
+    // Show total value
+    const totalEl = document.getElementById('details-products-total-bar');
     totalEl.textContent = `Total Product Value: ${formatMoney(totalValue)}`;
+  } else {
+    productsEl.innerHTML = '<div class="empty-message">No products for this project</div>';
   }
   
   // Set up "Add Product" button
@@ -4179,14 +3834,6 @@ function populateProductsTab(project) {
     };
   }
   
-  // Set up "Add Category" button
-  const addCategoryBtn = document.getElementById('add-product-category-btn');
-  if (addCategoryBtn) {
-    addCategoryBtn.onclick = () => {
-      addNewCategory();
-    };
-  }
-  
   // Set up "Save Changes" button
   const saveProductsBtn = document.getElementById('save-products-changes');
   if (saveProductsBtn) {
@@ -4194,266 +3841,10 @@ function populateProductsTab(project) {
       saveProjectProductChanges();
     };
   }
-  
-  // Setup drag and drop for categorization
-  setupProductCategorization();
-}
-
-// Create a product element for the products list
-function createProductElement(product, index, totalValue) {
-  const productDetails = findProductById(product.productId);
-  
-  // Create a container for the product
-  const productItem = document.createElement('div');
-  productItem.className = 'product-item';
-  productItem.dataset.index = index;
-  
-  if (productDetails) {
-    const totalPrice = productDetails.price * product.quantity;
-    totalValue += totalPrice;
-    
-    productItem.innerHTML = `
-      <div class="product-item-header">
-        <div class="product-item-name">${productDetails.name}</div>
-        <div class="product-item-details">
-          <div class="product-item-id">${productDetails.id}</div>
-          <div class="product-item-price">${product.quantity} x ${formatPrice(productDetails.price, productDetails.currency)} = ${formatPrice(totalPrice, productDetails.currency)}</div>
-        </div>
-      </div>
-      <div class="product-actions">
-        <div class="product-item-quantity">${product.quantity}x</div>
-        <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
-          <i class="fa fa-trash"></i>
-        </button>
-      </div>
-    `;
-    
-    // Add event listener for remove button
-    const removeButton = productItem.querySelector('.remove-product');
-    if (removeButton) {
-      removeButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        removeProductFromProject(index);
-      });
-    }
-    
-    return productItem;
-  } else {
-    // Product not found
-    productItem.innerHTML = `
-      <div class="product-item-header">
-        <div class="product-item-name">Unknown Product</div>
-        <div class="product-actions">
-          <div class="product-item-quantity">${product.quantity}x</div>
-          <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
-            <i class="fa fa-trash"></i>
-          </button>
-        </div>
-      </div>
-      <div class="product-item-details">
-        <div class="product-item-id">${product.productId}</div>
-        <div class="product-item-price">Product not found</div>
-      </div>
-    `;
-    
-    // Add event listener for remove button
-    const removeButton = productItem.querySelector('.remove-product');
-    if (removeButton) {
-      removeButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        removeProductFromProject(index);
-      });
-    }
-    
-    return productItem;
-  }
-}
-
-// Set up drag and drop for product categorization
-function setupProductCategorization() {
-  // Get all drop zones
-  const dropZones = document.querySelectorAll('.category-drop-zone');
-  
-  dropZones.forEach(zone => {
-    zone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      zone.classList.add('drag-over');
-    });
-    
-    zone.addEventListener('dragleave', () => {
-      zone.classList.remove('drag-over');
-    });
-    
-    zone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      zone.classList.remove('drag-over');
-      
-      const productIndex = e.dataTransfer.getData('product-index');
-      const productCategory = e.dataTransfer.getData('product-category');
-      const targetCategoryId = zone.dataset.categoryId;
-      
-      if (productIndex && targetCategoryId) {
-        moveProductToCategory(parseInt(productIndex), targetCategoryId, productCategory);
-      }
-    });
-  });
-}
-
-// Move a product to a category
-function moveProductToCategory(productIndex, categoryId, sourceCategory) {
-  const detailsModal = document.getElementById('project-details-modal');
-  if (!detailsModal) return;
-  
-  const projectId = detailsModal.dataset.projectId;
-  const project = projects.find(p => p.id === projectId);
-  
-  if (!project || !project.products) return;
-  
-  // Update the product's category
-  project.products[productIndex].categoryId = categoryId;
-  
-  // Update the UI
-  populateProductsTab(project);
-}
-
-// Add a new category to the project
-function addNewCategory() {
-  const detailsModal = document.getElementById('project-details-modal');
-  if (!detailsModal) return;
-  
-  const projectId = detailsModal.dataset.projectId;
-  const project = projects.find(p => p.id === projectId);
-  
-  if (!project) return;
-  
-  // Show a prompt for the category name
-  const categoryName = prompt('Enter a name for the new category:');
-  if (!categoryName) return;
-  
-  // Initialize categories array if needed
-  if (!project.productCategories) {
-    project.productCategories = [];
-  }
-  
-  // Add the new category
-  const newCategory = {
-    id: generateCategoryId(),
-    name: categoryName,
-    order: project.productCategories.length,
-    expanded: true
-  };
-  
-  project.productCategories.push(newCategory);
-  
-  // Update the UI
-  populateProductsTab(project);
-}
-
-// Remove a category from the project
-function removeCategory(categoryId) {
-  const detailsModal = document.getElementById('project-details-modal');
-  if (!detailsModal) return;
-  
-  const projectId = detailsModal.dataset.projectId;
-  const project = projects.find(p => p.id === projectId);
-  
-  if (!project || !project.productCategories) return;
-  
-  // Find the category index
-  const categoryIndex = project.productCategories.findIndex(c => c.id === categoryId);
-  if (categoryIndex === -1) return;
-  
-  // Remove the category
-  project.productCategories.splice(categoryIndex, 1);
-  
-  // Remove category ID from all products in this category
-  if (project.products) {
-    project.products.forEach(product => {
-      if (product.categoryId === categoryId) {
-        delete product.categoryId;
-      }
-    });
-  }
-  
-  // Update the UI
-  populateProductsTab(project);
-}
-
-// Move a category up in the order
-function moveCategoryUp(categoryId) {
-  const detailsModal = document.getElementById('project-details-modal');
-  if (!detailsModal) return;
-  
-  const projectId = detailsModal.dataset.projectId;
-  const project = projects.find(p => p.id === projectId);
-  
-  if (!project || !project.productCategories) return;
-  
-  // Find the category index
-  const categoryIndex = project.productCategories.findIndex(c => c.id === categoryId);
-  if (categoryIndex <= 0) return; // Already at the top
-  
-  // Swap with the previous category
-  const temp = project.productCategories[categoryIndex];
-  project.productCategories[categoryIndex] = project.productCategories[categoryIndex - 1];
-  project.productCategories[categoryIndex - 1] = temp;
-  
-  // Update order values
-  project.productCategories.forEach((cat, idx) => {
-    cat.order = idx;
-  });
-  
-  // Update the UI
-  populateProductsTab(project);
-}
-
-// Move a category down in the order
-function moveCategoryDown(categoryId) {
-  const detailsModal = document.getElementById('project-details-modal');
-  if (!detailsModal) return;
-  
-  const projectId = detailsModal.dataset.projectId;
-  const project = projects.find(p => p.id === projectId);
-  
-  if (!project || !project.productCategories) return;
-  
-  // Find the category index
-  const categoryIndex = project.productCategories.findIndex(c => c.id === categoryId);
-  if (categoryIndex === -1 || categoryIndex >= project.productCategories.length - 1) return; // Already at the bottom
-  
-  // Swap with the next category
-  const temp = project.productCategories[categoryIndex];
-  project.productCategories[categoryIndex] = project.productCategories[categoryIndex + 1];
-  project.productCategories[categoryIndex + 1] = temp;
-  
-  // Update order values
-  project.productCategories.forEach((cat, idx) => {
-    cat.order = idx;
-  });
-  
-  // Update the UI
-  populateProductsTab(project);
-}
-
-// Toggle category expansion
-function toggleCategoryExpansion(categoryEl, expanded) {
-  const categoryIcon = categoryEl.querySelector('.category-name i');
-  const toggleIcon = categoryEl.querySelector('.toggle-category i');
-  const productsContainer = categoryEl.querySelector('.category-products');
-  
-  if (expanded) {
-    categoryIcon.className = 'fa fa-folder-open';
-    toggleIcon.className = 'fa fa-chevron-up';
-    productsContainer.style.display = 'block';
-  } else {
-    categoryIcon.className = 'fa fa-folder';
-    toggleIcon.className = 'fa fa-chevron-down';
-    productsContainer.style.display = 'none';
-  }
 }
 
 // Show modal to add a product
-function showAddProductModal(project, categoryId = null) {
+function showAddProductModal(project) {
   // If project parameter is not provided, get it from the current modal
   if (!project) {
     const detailsModal = document.getElementById('project-details-modal');
@@ -4479,15 +3870,6 @@ function showAddProductModal(project, categoryId = null) {
   addProjectProductInput(null, tempContainer);
   
   // Create a modal for selecting products
-  // Find category name if a category ID is provided
-  let categoryName = '';
-  if (categoryId && project.productCategories) {
-    const category = project.productCategories.find(c => c.id === categoryId);
-    if (category) {
-      categoryName = category.name;
-    }
-  }
-  
   const modal = document.createElement('div');
   modal.className = 'modal active';
   modal.innerHTML = `
@@ -4497,23 +3879,8 @@ function showAddProductModal(project, categoryId = null) {
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Select a product to add to project: <strong>${project.title}</strong>
-        ${categoryId ? `<br><span style="color: var(--accent);">Adding to category: ${categoryName}</span>` : ''}
-        </p>
-        
+        <p>Select a product to add to project: <strong>${project.title}</strong></p>
         <div id="add-product-container"></div>
-        
-        ${!categoryId ? `
-        <div class="form-group">
-          <label for="product-category-select">Add to Category</label>
-          <select id="product-category-select">
-            <option value="">Uncategorized</option>
-            ${project.productCategories ? project.productCategories.map(cat => 
-              `<option value="${cat.id}">${cat.name}</option>`).join('') : ''}
-          </select>
-        </div>
-        ` : ''}
-        
         <div class="modal-actions">
           <button class="button" id="confirm-add-product">Add Product</button>
           <button class="button button-outline" id="cancel-add-product">Cancel</button>
@@ -4555,20 +3922,10 @@ function showAddProductModal(project, categoryId = null) {
         project.products = [];
       }
       
-      // Determine category ID
-      let selectedCategoryId = categoryId;
-      if (!selectedCategoryId) {
-        const categorySelect = document.getElementById('product-category-select');
-        if (categorySelect) {
-          selectedCategoryId = categorySelect.value;
-        }
-      }
-      
       // Add the product to the project
       project.products.push({
         productId: productSelect.value,
-        quantity: parseInt(quantityInput.value, 10) || 1,
-        categoryId: selectedCategoryId || undefined
+        quantity: parseInt(quantityInput.value, 10) || 1
       });
       
       // Update the projects tab

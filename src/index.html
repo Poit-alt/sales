@@ -424,6 +424,31 @@
                 </div>
               </div>
             </div>
+            
+            <div class="settings-section">
+              <h2>Project Product Categories</h2>
+              <p class="settings-description">
+                Define standard categories for organizing products in projects. 
+                These categories will be available in all new projects.
+              </p>
+              
+              <div class="category-manager">
+                <div id="product-categories-list">
+                  <!-- Categories will be listed here -->
+                </div>
+                
+                <div class="category-input-row">
+                  <input type="text" id="new-category-input" placeholder="New category name">
+                  <button id="add-category-btn" class="button button-sm">
+                    <i class="fa fa-plus"></i> Add
+                  </button>
+                </div>
+                
+                <div class="settings-actions">
+                  <button id="save-categories" class="button">Save Categories</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -597,6 +622,197 @@
       </div>
     </div>
     
+    <!-- Project Details Modal with Technical Summary -->
+    <div id="project-details-modal" class="modal">
+      <div class="modal-content modal-content-wide">
+        <div class="modal-header">
+          <h2 id="project-details-title">Project Details</h2>
+          <div class="modal-header-actions">
+            <button id="details-print-btn" class="button-icon" title="Print Technical Summary">
+              <i class="fa fa-print"></i>
+            </button>
+            <button class="modal-close">&times;</button>
+          </div>
+        </div>
+        <div class="modal-tabs">
+          <button type="button" class="modal-tab active" data-tab="overview">Overview</button>
+          <button type="button" class="modal-tab" data-tab="tech-summary">Technical Summary</button>
+          <button type="button" class="modal-tab" data-tab="products">Products</button>
+          <button type="button" class="modal-tab" data-tab="revisions">Revisions</button>
+        </div>
+        <div class="modal-body">
+          <!-- Overview Tab -->
+          <div class="modal-tab-content active" data-tab="overview">
+            <div class="project-details-container">
+              <div class="project-details-section">
+                <h3>General Information</h3>
+                <div class="project-details-grid">
+                  <div class="detail-item">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value" id="details-status"></div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="detail-label">Priority</div>
+                    <div class="detail-value" id="details-priority"></div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="detail-label">Client</div>
+                    <div class="detail-value" id="details-client"></div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="detail-label">Deadline</div>
+                    <div class="detail-value" id="details-deadline"></div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="detail-label">Completion</div>
+                    <div class="detail-value" id="details-completion"></div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="detail-label">Team Size</div>
+                    <div class="detail-value" id="details-team-size"></div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="detail-label">Budget</div>
+                    <div class="detail-value" id="details-budget"></div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="detail-label">Created By</div>
+                    <div class="detail-value" id="details-created-by"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="project-details-section">
+                <h3>Description</h3>
+                <div class="project-description" id="details-description"></div>
+              </div>
+              
+              <div class="project-details-section">
+                <h3>Tasks</h3>
+                <div class="project-tasks-list" id="details-tasks">
+                  <div class="empty-message">No tasks for this project</div>
+                </div>
+              </div>
+              
+              <div class="project-details-section">
+                <h3>Products Summary</h3>
+                <div class="project-products-summary" id="details-products-summary">
+                  <div class="empty-message">No products for this project</div>
+                </div>
+                <div class="project-products-total" id="details-products-total"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Technical Summary Tab -->
+          <div class="modal-tab-content" data-tab="tech-summary">
+            <div class="tech-summary-container">
+              <div class="tech-summary-header">
+                <h3>Technical Summary</h3>
+                <div class="tech-summary-actions">
+                  <button id="tech-summary-save" class="button button-sm">Save Changes</button>
+                </div>
+              </div>
+              
+              <div class="tech-summary-section">
+                <div class="form-group">
+                  <label for="tech-summary-title">Summary Title</label>
+                  <input type="text" id="tech-summary-title" placeholder="Enter a title for this technical summary">
+                </div>
+                
+                <div class="form-group">
+                  <label for="tech-summary-scope">Project Scope</label>
+                  <textarea id="tech-summary-scope" rows="4" placeholder="Define the technical scope of this project..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                  <label for="tech-summary-requirements">Technical Requirements</label>
+                  <textarea id="tech-summary-requirements" rows="5" placeholder="List the technical requirements..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                  <label for="tech-summary-approach">Technical Approach</label>
+                  <textarea id="tech-summary-approach" rows="5" placeholder="Describe the technical approach..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                  <label for="tech-summary-constraints">Constraints & Considerations</label>
+                  <textarea id="tech-summary-constraints" rows="3" placeholder="List any technical constraints or special considerations..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                  <label for="tech-summary-recommendations">Recommendations</label>
+                  <textarea id="tech-summary-recommendations" rows="3" placeholder="Add technical recommendations..."></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Products Tab -->
+          <div class="modal-tab-content" data-tab="products">
+            <div class="project-products-container">
+              <div class="project-products-header">
+                <h3>Project Products</h3>
+                <div class="project-products-actions">
+                  <button id="add-project-product-btn" class="button button-sm">
+                    <i class="fa fa-plus"></i> Add Product
+                  </button>
+                  <button id="add-product-category-btn" class="button button-sm button-outline">
+                    <i class="fa fa-folder"></i> Add Category
+                  </button>
+                </div>
+              </div>
+              
+              <div class="products-summary-bar">
+                <div class="product-category-summary">
+                  <span id="category-count-display">0 categories</span>
+                </div>
+                <div class="product-count-summary">
+                  <span id="product-count-display">0 products</span>
+                </div>
+              </div>
+              
+              <div class="project-products-categories" id="details-product-categories">
+                <!-- Product categories will be rendered here -->
+              </div>
+              
+              <div class="project-products-list" id="details-products">
+                <div class="empty-message">No products for this project</div>
+              </div>
+              
+              <div class="project-products-total-bar">
+                <div class="project-products-total" id="details-products-total-bar"></div>
+                <button id="save-products-changes" class="button">Save Changes</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Revisions Tab -->
+          <div class="modal-tab-content" data-tab="revisions">
+            <div class="project-revisions-container">
+              <div class="project-revisions-header">
+                <h3>Revision History</h3>
+                <div class="project-revisions-actions">
+                  <button id="create-revision-btn" class="button button-sm">
+                    <i class="fa fa-plus"></i> Create New Revision
+                  </button>
+                </div>
+              </div>
+              
+              <div class="project-revisions-list" id="project-revisions">
+                <div class="empty-message">No revisions saved yet</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" id="details-edit-project" class="button">Edit Project</button>
+            <button type="button" id="details-close" class="button button-outline">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  
     <!-- New Project Modal -->
     <div id="project-modal" class="modal">
       <div class="modal-content">
@@ -669,6 +885,16 @@
                   <!-- Task inputs will be added here dynamically -->
                 </div>
                 <button type="button" id="add-task" class="button button-outline"><i class="fa fa-plus"></i> Add Task</button>
+              </div>
+            </div>
+            
+            <div class="form-row products-section">
+              <div class="form-group full-width">
+                <label>Project Products <span class="optional-text">(optional)</span></label>
+                <div id="project-products-container">
+                  <!-- Product items will be added here dynamically -->
+                </div>
+                <button type="button" id="add-project-product" class="button button-outline"><i class="fa fa-plus"></i> Add Product</button>
               </div>
             </div>
             

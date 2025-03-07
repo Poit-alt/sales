@@ -12,7 +12,24 @@
       "teamSize": 3,
       "budget": 5000,
       "createdAt": "2025-03-07T19:22:57.465Z",
-      "createdBy": "Peter"
+      "createdBy": "Peter",
+      "status": "Active",
+      "products": [
+        {
+          "productId": "PRD-004",
+          "quantity": 5
+        }
+      ],
+      "updatedAt": "2025-03-07T20:45:21.191Z",
+      "updatedBy": "Peter",
+      "revisions": [
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 1 products.",
+          "date": "2025-03-07T21:27:59.655Z",
+          "author": "Peter"
+        }
+      ]
     },
     {
       "id": "proj-m7z5xsmx5y31b",
@@ -26,11 +43,154 @@
       "teamSize": 3,
       "budget": 5000,
       "createdAt": "2025-03-07T19:22:57.465Z",
-      "createdBy": "Peter"
+      "createdBy": "Peter",
+      "status": "Pending",
+      "products": [],
+      "updatedAt": "2025-03-07T20:45:04.175Z",
+      "updatedBy": "Peter"
+    },
+    {
+      "id": "proj-m7z90wu8hnjrc",
+      "title": "SP-2021-test",
+      "client": "test",
+      "priority": "medium",
+      "status": "Active",
+      "deadline": "2025-04-07",
+      "description": "segse",
+      "budget": 0,
+      "teamSize": 1,
+      "tasks": [],
+      "products": [
+        {
+          "productId": "PRD-001",
+          "quantity": 1,
+          "categoryId": "services"
+        },
+        {
+          "productId": "BDL-001",
+          "quantity": 1
+        }
+      ],
+      "completion": 0,
+      "createdAt": "2025-03-07T20:49:21.728Z",
+      "createdBy": "Peter",
+      "revisions": [
+        {
+          "title": "test",
+          "description": "chairs",
+          "date": "2025-03-07T21:03:21.884Z",
+          "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 6 products.",
+          "date": "2025-03-07T21:12:46.849Z",
+          "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 0 products.",
+          "date": "2025-03-07T21:15:47.433Z",
+          "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 1 products.",
+          "date": "2025-03-07T21:16:58.568Z",
+          "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 1 products.",
+          "date": "2025-03-07T21:17:08.867Z",
+          "author": "Peter"
+        }
+      ],
+      "productCategories": [
+        {
+          "id": "software",
+          "name": "Software",
+          "order": 1,
+          "expanded": true
+        },
+        {
+          "id": "services",
+          "name": "Services",
+          "order": 2,
+          "expanded": true
+        }
+      ]
+    },
+    {
+      "id": "proj-m7zarpzjp4ao4",
+      "title": "Test 2",
+      "client": "efs",
+      "priority": "medium",
+      "status": "Active",
+      "deadline": "2025-04-07",
+      "description": "efs",
+      "budget": 0,
+      "teamSize": 1,
+      "tasks": [],
+      "products": [
+        {
+          "productId": "PRD-004",
+          "quantity": 1,
+          "categoryId": "cat-m7zar4964v9m3"
+        },
+        {
+          "productId": "PRD-004",
+          "quantity": 1,
+          "categoryId": "hardware"
+        }
+      ],
+      "completion": 0,
+      "createdAt": "2025-03-07T21:38:12.175Z",
+      "createdBy": "Peter",
+      "productCategories": [
+        {
+          "id": "hardware",
+          "name": "Hardware",
+          "order": 0,
+          "expanded": true
+        },
+        {
+          "id": "software",
+          "name": "Software",
+          "order": 1,
+          "expanded": true
+        },
+        {
+          "id": "services",
+          "name": "Services",
+          "order": 2,
+          "expanded": true
+        },
+        {
+          "id": "cat-m7zar4964v9m3",
+          "name": "Test",
+          "order": 3,
+          "expanded": true
+        }
+      ],
+      "revisions": [
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 1 products.",
+          "date": "2025-03-07T21:38:42.009Z",
+          "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 2 products.",
+          "date": "2025-03-07T21:39:03.008Z",
+          "author": "Peter"
+        }
+      ]
     }
   ],
   "meta": {
-    "updatedAt": "2025-03-07T19:52:39.547Z",
+    "updatedAt": "2025-03-07T21:39:03.008Z",
     "updatedBy": "Peter",
     "version": "1.0"
   }

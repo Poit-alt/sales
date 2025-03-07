@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Settings tab element not found in DOM!');
   }
   
+  // Initialize project functionality
+  initializeProjectForm();
+  initializeProjectDatabase();
+  checkProjectsDatabasePath(); // Check for projects database path first
+  
   // Detect platform and add appropriate class to body
   // This will be used for platform-specific styling
   if (window.electron && window.electron.platform) {
@@ -193,6 +198,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (headerActionButton) {
             headerActionButton.innerHTML = '<i class="fa fa-plus"></i> New Project';
             headerActionButton.style.display = 'block';
+            
+            // Set click handler for new project button
+            headerActionButton.onclick = openNewProjectModal;
           }
         } else if (target === 'products') {
           contentTitle.textContent = 'Product Catalog';
@@ -2036,4 +2044,815 @@ function closeNotification(notification) {
       notification.parentNode.removeChild(notification);
     }
   }, 300);
+}
+
+// Project management functions
+
+// Projects data store
+let projects = [
+  // Initial projects are static data from HTML
+];
+
+// Open new project modal
+function openNewProjectModal() {
+  const projectModal = document.getElementById('project-modal');
+  if (!projectModal) return;
+  
+  // Clear form
+  const projectForm = document.getElementById('project-form');
+  if (projectForm) {
+    projectForm.reset();
+    
+    // Set today's date as default
+    const deadlineInput = document.getElementById('project-deadline');
+    if (deadlineInput) {
+      const today = new Date();
+      const nextMonth = new Date(today);
+      nextMonth.setMonth(today.getMonth() + 1);
+      
+      // Format date as YYYY-MM-DD
+      const formattedDate = nextMonth.toISOString().split('T')[0];
+      deadlineInput.value = formattedDate;
+    }
+    
+    // Clear tasks
+    const tasksContainer = document.getElementById('tasks-container');
+    if (tasksContainer) {
+      tasksContainer.innerHTML = '';
+    }
+  }
+  
+  // Set form title
+  const modalTitle = document.getElementById('project-modal-title');
+  if (modalTitle) {
+    modalTitle.textContent = 'Create New Project';
+  }
+  
+  // Update submit button
+  const saveButton = document.getElementById('save-project');
+  if (saveButton) {
+    saveButton.textContent = 'Create Project';
+  }
+  
+  // Show modal
+  projectModal.classList.add('active');
+  
+  // Focus on first field
+  setTimeout(() => {
+    const projectNameInput = document.getElementById('project-name');
+    if (projectNameInput) {
+      projectNameInput.focus();
+    }
+  }, 100);
+}
+
+// Close project modal
+function closeProjectModal() {
+  const projectModal = document.getElementById('project-modal');
+  if (projectModal) {
+    projectModal.classList.remove('active');
+  }
+}
+
+// Add task input to form
+function addTaskInput(taskText = '') {
+  const tasksContainer = document.getElementById('tasks-container');
+  if (!tasksContainer) return;
+  
+  const taskGroup = document.createElement('div');
+  taskGroup.className = 'task-input-group';
+  
+  taskGroup.innerHTML = `
+    <input type="text" class="task-input" value="${taskText}" placeholder="Enter task description">
+    <button type="button" class="task-remove-btn"><i class="fa fa-times"></i></button>
+  `;
+  
+  // Add remove button functionality
+  const removeBtn = taskGroup.querySelector('.task-remove-btn');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', () => {
+      taskGroup.remove();
+    });
+  }
+  
+  tasksContainer.appendChild(taskGroup);
+  
+  // Focus on new input
+  const newInput = taskGroup.querySelector('.task-input');
+  if (newInput) {
+    newInput.focus();
+  }
+}
+
+// Generate unique ID for projects
+function generateProjectId() {
+  return 'proj-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+// Save new project
+async function saveProject(projectData) {
+  // Add to projects array
+  projects.push(projectData);
+  
+  // Get the database path (either user selected or default)
+  const dbPath = localStorage.getItem('projectsDatabasePath');
+  
+  try {
+    // First, always save to localStorage as backup
+    saveProjectsToStorage();
+    
+    // Then try saving to file system
+    const saveResult = await saveProjectsToDatabase();
+    
+    // Add project card to UI regardless of save status
+    addProjectCardToUI(projectData);
+    
+    // Show appropriate notification based on save result
+    if (saveResult) {
+      if (dbPath) {
+        showNotification(`Project created and saved to: ${dbPath}`, 'success');
+      } else {
+        showNotification('Project created and saved successfully', 'success');
+      }
+    } else {
+      // If file save failed but localStorage succeeded
+      showNotification('Project created and saved to local browser storage only', 'warning');
+    }
+    
+    return saveResult;
+  } catch (err) {
+    console.error('Error in saveProject:', err);
+    
+    // Still add to UI even if save failed
+    addProjectCardToUI(projectData);
+    
+    // Show warning notification
+    showNotification('Project created but there was an error saving to file', 'warning');
+    
+    // Rethrow to allow caller to handle
+    throw err;
+  }
+}
+
+// Check for projects database path
+async function checkProjectsDatabasePath() {
+  console.log('Checking projects database path on startup...');
+  
+  if (window.electron && window.electron.database) {
+    // Check for a local directory in the app's path
+    const appDataPath = '/Users/peternordal/Documents/GitHub/sales/data';
+    console.log('Checking for app data directory for projects at:', appDataPath);
+    
+    // Get saved projects database path
+    const dbPath = localStorage.getItem('projectsDatabasePath');
+    
+    // If custom database path is set, use that first
+    if (dbPath) {
+      console.log('Projects database path is set to:', dbPath);
+      displayProjectsDatabasePath(dbPath);
+      
+      try {
+        // Try to read projects.json from the selected path
+        // We're using a custom approach for path handling
+        const checkResult = await window.electron.database.readFile('projects.json', dbPath);
+        
+        if (!checkResult || checkResult.error) {
+          console.warn('Could not read projects.json from selected path:', dbPath);
+          console.log('Projects file will be created when you save your first project');
+          
+          // Show notification but keep the path
+          showNotification('Projects database will be created when you add a project', 'info');
+          
+          // Try to load any existing projects from localStorage
+          loadProjectsFromStorage();
+        } else {
+          console.log('Successfully read projects from selected path');
+          
+          // Load projects from the database
+          if (checkResult.data && checkResult.data.projects) {
+            projects = checkResult.data.projects;
+            refreshProjectsUI();
+            console.log('Loaded', projects.length, 'projects from database');
+          } else {
+            console.log('No projects found in database or invalid format');
+            loadProjectsFromStorage();
+          }
+        }
+      } catch (err) {
+        console.error('Error checking projects in selected path:', err);
+        
+        // Try local data directory as fallback
+        console.log('Trying to load projects from local data directory instead');
+        displayProjectsDatabasePath('Local data directory');
+        await loadProjects();
+      }
+    } else {
+      // No custom path, try local data directory
+      console.log('No projects database path set, using local directory');
+      displayProjectsDatabasePath('Local data directory');
+      await loadProjects(); // Try to load from local data directory
+    }
+  } else {
+    // If running without Electron, load from localStorage
+    console.log('No electron context available for projects, loading from localStorage');
+    loadProjectsFromStorage();
+  }
+}
+
+// Display the projects database path in UI
+function displayProjectsDatabasePath(path) {
+  const dbPathContainer = document.getElementById('projects-db-path-container');
+  if (!dbPathContainer) return;
+  
+  dbPathContainer.innerHTML = `
+    <div class="db-path-display">
+      <div class="path">${path}</div>
+      <div class="status connected">Connected</div>
+    </div>
+  `;
+}
+
+// Display when no projects database path is set
+function displayNoProjectsDatabasePath() {
+  const dbPathContainer = document.getElementById('projects-db-path-container');
+  if (!dbPathContainer) return;
+  
+  dbPathContainer.innerHTML = `
+    <div class="db-path-display">
+      <div class="path">No projects database directory selected</div>
+      <div class="status disconnected">Not Connected</div>
+    </div>
+  `;
+}
+
+// Save projects to file system
+async function saveProjectsToDatabase() {
+  if (window.electron && window.electron.database) {
+    try {
+      // Create proper data structure
+      const projectsData = { 
+        projects: projects,
+        meta: {
+          updatedAt: new Date().toISOString(),
+          updatedBy: getCurrentUserName(),
+          version: '1.0'
+        }
+      };
+      
+      // Get the selected database path
+      const dbPath = localStorage.getItem('projectsDatabasePath');
+      if (dbPath) {
+        console.log('Using selected database path:', dbPath);
+      } else {
+        console.log('No database path selected, using default location');
+      }
+      
+      // IMPORTANT: The correct method is saveFile, not writeFile
+      console.log('Calling saveFile method with projects.json');
+      
+      // Send the path along with the data if needed
+      let saveParams = {
+        fileName: 'projects.json',
+        data: projectsData
+      };
+      
+      // Add path if we have one
+      if (dbPath) {
+        saveParams.path = dbPath;
+      }
+      
+      // Save the file using the proper API method
+      const result = await window.electron.database.saveFile('projects.json', projectsData);
+      
+      // Check result
+      if (result && result.error) {
+        console.error('Error saving projects to database:', result.error);
+        saveProjectsToStorage();
+        return false;
+      }
+      
+      console.log('Projects saved successfully to database:', result ? result.path : 'Unknown path');
+      return true;
+    } catch (err) {
+      console.error('Error in saveProjectsToDatabase:', err);
+      
+      // Try alternative approach if the direct call fails
+      try {
+        console.log('Trying alternative approach: sending via IPC');
+        
+        // Get the selected database path
+        const dbPath = localStorage.getItem('projectsDatabasePath');
+        
+        // Create data to send
+        const saveData = {
+          type: 'projects',
+          fileName: 'projects.json',
+          data: {
+            projects: projects,
+            meta: {
+              updatedAt: new Date().toISOString(),
+              updatedBy: getCurrentUserName(),
+              version: '1.0'
+            }
+          },
+          path: dbPath
+        };
+        
+        // Send via IPC channel - 'saveData' is in the whitelist in preload.js
+        window.electron.sendToMain('saveData', saveData);
+        
+        console.log('Data sent via IPC channel');
+        
+        // Listen for save result
+        const savePromise = new Promise((resolve) => {
+          const resultHandler = (result) => {
+            console.log('Received save result:', result);
+            resolve(result);
+          };
+          
+          // Set up listener for the result
+          window.electron.receiveFromMain('dataResult', resultHandler);
+          
+          // Also listen for errors
+          window.electron.receiveFromMain('error', (err) => {
+            console.error('Error from main process:', err);
+            resolve({ success: false, error: err });
+          });
+        });
+        
+        // Wait for a response with a timeout
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => resolve({ success: true, note: 'No explicit confirmation received' }), 1000);
+        });
+        
+        // Use the first result we get
+        await Promise.race([savePromise, timeoutPromise]);
+        
+        // Consider it a success unless we hear otherwise
+        return true;
+      } catch (ipcErr) {
+        console.error('Error saving via IPC:', ipcErr);
+        // Fallback to localStorage if both approaches fail
+        saveProjectsToStorage();
+        return false;
+      }
+    }
+  } else {
+    // If no electron context, save to localStorage
+    saveProjectsToStorage();
+    return true;
+  }
+}
+
+// Load projects from file system
+async function loadProjects() {
+  if (window.electron && window.electron.database) {
+    try {
+      // Get the current database path (if any)
+      const dbPath = localStorage.getItem('projectsDatabasePath');
+      
+      // Try to read projects.json - either from default location or specified path
+      const result = await window.electron.database.readFile('projects.json', dbPath);
+      
+      if (!result || result.error) {
+        console.error('Error reading projects.json:', result ? result.error : 'No result');
+        
+        // Fallback to localStorage if reading from file fails
+        loadProjectsFromStorage();
+        return;
+      }
+      
+      if (result.data && result.data.projects) {
+        console.log('Successfully loaded projects from database:', result.data.projects.length, 'projects');
+        projects = result.data.projects;
+        refreshProjectsUI();
+      } else {
+        console.log('No projects found in database or invalid format, using defaults');
+        captureInitialProjects();
+      }
+    } catch (err) {
+      console.error('Error loading projects from database:', err);
+      
+      // Fallback to localStorage if reading from file fails
+      loadProjectsFromStorage();
+    }
+  } else {
+    // If no electron context, load from localStorage
+    loadProjectsFromStorage();
+  }
+}
+
+// Save projects to localStorage (as fallback)
+function saveProjectsToStorage() {
+  localStorage.setItem('projects', JSON.stringify(projects));
+}
+
+// Load projects from localStorage (as fallback)
+function loadProjectsFromStorage() {
+  const savedProjects = localStorage.getItem('projects');
+  if (savedProjects) {
+    try {
+      projects = JSON.parse(savedProjects);
+      
+      // Update UI with loaded projects
+      refreshProjectsUI();
+    } catch (err) {
+      console.error('Error loading projects from storage:', err);
+    }
+  } else {
+    // Capture initial projects from HTML if no saved projects
+    captureInitialProjects();
+  }
+}
+
+// Initialize project database functionality
+function initializeProjectDatabase() {
+  const selectProjectsDbPathBtn = document.getElementById('select-projects-db-path');
+  
+  if (selectProjectsDbPathBtn) {
+    selectProjectsDbPathBtn.addEventListener('click', async () => {
+      if (window.electron && window.electron.database) {
+        try {
+          // Show a folder selection dialog
+          console.log('Showing folder selection dialog');
+          
+          // React to the selected-path event
+          window.electron.receiveFromMain('selected-path', (path) => {
+            if (path) {
+              console.log('Path selected via event:', path);
+              handleNewDatabasePath(path);
+            }
+          });
+          
+          // Call selectPath directly
+          const result = await window.electron.database.selectPath();
+          
+          // Handle direct result if available
+          if (result) {
+            console.log('Direct result from selectPath:', result);
+            
+            // Extract path from result (different formats are possible)
+            let dbPath = null;
+            if (typeof result === 'string') {
+              dbPath = result;
+            } else if (result.path) {
+              dbPath = result.path;
+            } else if (result.filePaths && result.filePaths.length > 0) {
+              dbPath = result.filePaths[0];
+            }
+            
+            if (dbPath) {
+              handleNewDatabasePath(dbPath);
+            } else {
+              console.log('No valid path found in result');
+            }
+          }
+        } catch (err) {
+          console.error('Error selecting database path:', err);
+          showNotification('Failed to select database path', 'error');
+        }
+      } else {
+        showNotification('Database selection is not available in this environment', 'warning');
+      }
+    });
+  }
+}
+
+// Handle a newly selected database path
+function handleNewDatabasePath(dbPath) {
+  console.log('User selected database path:', dbPath);
+  
+  // Save selected path
+  localStorage.setItem('projectsDatabasePath', dbPath);
+  
+  // Update display
+  displayProjectsDatabasePath(dbPath);
+  
+  // Load projects from selected path
+  loadProjectsFromDatabase(dbPath);
+  
+  // Notify the user
+  showNotification(`Projects database path set to: ${dbPath}`, 'success');
+}
+
+// Load projects from specified database path
+async function loadProjectsFromDatabase(dbPath) {
+  if (!window.electron || !window.electron.database) {
+    return;
+  }
+  
+  try {
+    // Store the path in localStorage for future use
+    localStorage.setItem('projectsDatabasePath', dbPath);
+    
+    console.log('Attempting to read projects.json from:', dbPath);
+    
+    // Since we can't pass the path to readFile directly, we need to first
+    // set the path in the main process context, then read the file
+    
+    // Send path data to the main process
+    window.electron.sendToMain('saveData', {
+      type: 'database-path',
+      path: dbPath
+    });
+    
+    // Now try to read the file (main process should use the path we just sent)
+    const checkResult = await window.electron.database.readFile('projects.json');
+    
+    // Check if we got a valid result
+    if (!checkResult || checkResult.error || !checkResult.data) {
+      console.log('No existing projects.json found at selected path, will create one when needed');
+      showNotification('New projects database will be created when you add your first project', 'info');
+      
+      // Get any existing projects from localStorage to populate the new database
+      loadProjectsFromStorage();
+      return;
+    }
+    
+    // Process the successful result
+    console.log('Found existing projects database at:', dbPath);
+    
+    if (checkResult.data.projects && Array.isArray(checkResult.data.projects)) {
+      // Valid projects array found
+      projects = checkResult.data.projects;
+      refreshProjectsUI();
+      
+      // Show notification
+      showNotification(`${projects.length} projects loaded from database`, 'success');
+    } else {
+      // Got a result but it doesn't have the expected format
+      console.warn('Invalid projects data format:', checkResult.data);
+      showNotification('Found database file has invalid format', 'warning');
+      loadProjectsFromStorage();
+    }
+  } catch (err) {
+    console.error('Error loading projects from database:', err);
+    showNotification('Failed to load projects from database', 'error');
+    
+    // Try an alternative approach - read any available projects file
+    try {
+      console.log('Trying to read projects from default location');
+      const fallbackResult = await window.electron.database.readFile('projects.json');
+      
+      if (fallbackResult && fallbackResult.data && fallbackResult.data.projects) {
+        console.log('Found projects in default location');
+        projects = fallbackResult.data.projects;
+        refreshProjectsUI();
+        showNotification('Projects loaded from default location', 'success');
+        return;
+      }
+    } catch (fallbackErr) {
+      console.error('Error in fallback read:', fallbackErr);
+    }
+    
+    // Fallback to localStorage as last resort
+    loadProjectsFromStorage();
+  }
+}
+
+// Capture the initial projects from the HTML structure
+function captureInitialProjects() {
+  const projectCards = document.querySelectorAll('.project-card');
+  
+  projects = Array.from(projectCards).map((card, index) => {
+    const title = card.querySelector('.project-title')?.textContent || `Project ${index + 1}`;
+    const priorityEl = card.querySelector('.project-priority');
+    const priority = priorityEl?.textContent.toLowerCase().includes('high') ? 'high' : 
+                    (priorityEl?.textContent.toLowerCase().includes('medium') ? 'medium' : 'low');
+                    
+    const deadlineText = card.querySelector('.project-deadline')?.textContent || '';
+    const deadlineMatch = deadlineText.match(/(\w+)\s+(\d+),\s+(\d+)/);
+    let deadline = '';
+    if (deadlineMatch) {
+      const [_, month, day, year] = deadlineMatch;
+      const monthNum = new Date(`${month} 1, 2000`).getMonth() + 1;
+      deadline = `${year}-${monthNum.toString().padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    const completionText = card.querySelector('.completion-text')?.textContent || '0% Complete';
+    const completion = parseInt(completionText) || 0;
+    
+    // Generate a unique ID for the project
+    const id = generateProjectId();
+    
+    return {
+      id,
+      title,
+      priority,
+      deadline,
+      completion,
+      client: '',
+      description: '',
+      tasks: [],
+      teamSize: 3,
+      budget: 5000,
+      createdAt: new Date().toISOString(),
+      createdBy: getCurrentUserName()
+    };
+  });
+  
+  // Save to localStorage for future use
+  saveProjectsToStorage();
+}
+
+// Add project card to UI
+function addProjectCardToUI(project) {
+  const projectGrid = document.querySelector('.project-grid');
+  if (!projectGrid) return;
+  
+  // Format date for display
+  const deadlineDate = project.deadline ? new Date(project.deadline) : new Date();
+  const formattedDate = deadlineDate.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+  
+  // Create new card element
+  const card = document.createElement('div');
+  card.className = 'project-card';
+  card.dataset.projectId = project.id;
+  
+  // Determine number of completed tasks if any
+  let tasksCountHtml = '';
+  if (project.tasks && project.tasks.length > 0) {
+    const completedTasks = project.tasks.filter(task => task.completed).length;
+    tasksCountHtml = `
+      <div class="stat">
+        <i class="fa fa-check-circle"></i> ${completedTasks}/${project.tasks.length}
+      </div>
+    `;
+  }
+  
+  card.innerHTML = `
+    <div class="project-card-header">
+      <div class="project-priority ${project.priority}">${project.priority.charAt(0).toUpperCase() + project.priority.slice(1)} Priority</div>
+      <div class="project-menu"><i class="fa fa-ellipsis-v"></i></div>
+    </div>
+    <h3 class="project-title">${project.title}</h3>
+    <div class="project-details">
+      <div class="project-completion">
+        <span class="completion-text">${project.completion}% Complete</span>
+        <div class="progress-bar">
+          <div class="progress" style="width: ${project.completion}%"></div>
+        </div>
+      </div>
+      <div class="project-deadline">
+        <i class="fa fa-calendar"></i> Due: ${formattedDate}
+      </div>
+      <div class="project-team">
+        <div class="team-members">
+          <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+          <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
+          ${project.teamSize > 2 ? `<span class="team-more">+${project.teamSize - 2}</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="project-stats">
+      ${tasksCountHtml}
+      <div class="stat">
+        <i class="fa fa-comment"></i> 0
+      </div>
+      <div class="stat">
+        <i class="fa fa-paperclip"></i> 0
+      </div>
+    </div>
+  `;
+  
+  // Add hover effect
+  card.addEventListener('mouseenter', () => {
+    card.style.transform = 'translateY(-4px)';
+    card.style.boxShadow = '0 4px 12px var(--shadow)';
+  });
+  
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'translateY(0)';
+    card.style.boxShadow = '0 2px 8px var(--shadow)';
+  });
+  
+  // Add to grid
+  projectGrid.prepend(card); // Add at the beginning
+  
+  // Update project count in summary
+  updateProjectCounts();
+}
+
+// Update project counts in summary cards
+function updateProjectCounts() {
+  const projectCountEl = document.getElementById('num-projects');
+  if (projectCountEl) {
+    // Products count comes from allProducts
+    const productsCount = allProducts ? allProducts.length : 0;
+    projectCountEl.textContent = productsCount;
+  }
+  
+  // Update other summary cards if needed
+}
+
+// Refresh all projects in UI
+function refreshProjectsUI() {
+  const projectGrid = document.querySelector('.project-grid');
+  if (!projectGrid) return;
+  
+  // Clear existing projects
+  projectGrid.innerHTML = '';
+  
+  // Add all projects
+  projects.forEach(project => {
+    addProjectCardToUI(project);
+  });
+}
+
+// Initialize project form event listeners
+function initializeProjectForm() {
+  const projectForm = document.getElementById('project-form');
+  const cancelProjectBtn = document.getElementById('cancel-project');
+  const addTaskBtn = document.getElementById('add-task');
+  const projectModalCloseBtn = document.querySelector('#project-modal .modal-close');
+  
+  // Form submission
+  if (projectForm) {
+    projectForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Get form data
+      const name = document.getElementById('project-name').value;
+      const client = document.getElementById('project-client').value;
+      const priority = document.getElementById('project-priority').value;
+      const deadline = document.getElementById('project-deadline').value;
+      const description = document.getElementById('project-description').value;
+      const budget = parseFloat(document.getElementById('project-budget').value) || 0;
+      const teamSize = parseInt(document.getElementById('project-team-size').value) || 1;
+      
+      // Get tasks
+      const taskInputs = document.querySelectorAll('#tasks-container .task-input');
+      const tasks = Array.from(taskInputs).map(input => ({
+        text: input.value.trim(),
+        completed: false
+      })).filter(task => task.text !== '');
+      
+      // Create project object
+      const projectData = {
+        id: generateProjectId(),
+        title: name,
+        client,
+        priority,
+        deadline,
+        description,
+        budget,
+        teamSize,
+        tasks,
+        completion: 0,
+        createdAt: new Date().toISOString(),
+        createdBy: getCurrentUserName()
+      };
+      
+      // Show loading notification with path info
+      const dbPath = localStorage.getItem('projectsDatabasePath');
+      if (dbPath) {
+        showNotification(`Saving project to ${dbPath}...`, 'info');
+      } else {
+        showNotification('Saving project...', 'info');
+      }
+      
+      try {
+        // Save project (async operation)
+        await saveProject(projectData);
+        
+        // Close modal after successful save
+        closeProjectModal();
+      } catch (err) {
+        console.error('Error saving project:', err);
+        showNotification('Error saving project, please try again', 'error');
+        // Keep modal open so user can try again
+      }
+    });
+  }
+  
+  // Cancel button
+  if (cancelProjectBtn) {
+    cancelProjectBtn.addEventListener('click', closeProjectModal);
+  }
+  
+  // Close button
+  if (projectModalCloseBtn) {
+    projectModalCloseBtn.addEventListener('click', closeProjectModal);
+  }
+  
+  // Add task button
+  if (addTaskBtn) {
+    addTaskBtn.addEventListener('click', () => {
+      addTaskInput();
+    });
+  }
+  
+  // Close modal when clicking outside
+  const projectModal = document.getElementById('project-modal');
+  if (projectModal) {
+    projectModal.addEventListener('click', (e) => {
+      if (e.target === projectModal) {
+        closeProjectModal();
+      }
+    });
+  }
 }

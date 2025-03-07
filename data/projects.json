@@ -1,0 +1,37 @@
+{
+  "projects": [
+    {
+      "id": "proj-m7z5xsmxderyr",
+      "title": "Website Redesign",
+      "priority": "high",
+      "deadline": "2023-06-15",
+      "completion": 75,
+      "client": "",
+      "description": "",
+      "tasks": [],
+      "teamSize": 3,
+      "budget": 5000,
+      "createdAt": "2025-03-07T19:22:57.465Z",
+      "createdBy": "Peter"
+    },
+    {
+      "id": "proj-m7z5xsmx5y31b",
+      "title": "Mobile App Development",
+      "priority": "medium",
+      "deadline": "2023-07-30",
+      "completion": 45,
+      "client": "",
+      "description": "",
+      "tasks": [],
+      "teamSize": 3,
+      "budget": 5000,
+      "createdAt": "2025-03-07T19:22:57.465Z",
+      "createdBy": "Peter"
+    }
+  ],
+  "meta": {
+    "updatedAt": "2025-03-07T19:52:39.547Z",
+    "updatedBy": "Peter",
+    "version": "1.0"
+  }
+}

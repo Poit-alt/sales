@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize product categories in settings
   initializeProductCategoriesSettings();
   
+  // Initialize file dropdown menu
+  initializeFileMenu();
+  
   // Add console log to debug tab navigation
   console.log('Tabs setup:', {
     sidebarLinks: document.querySelectorAll('.sidebar-nav a[data-tab]'),
@@ -3725,13 +3728,35 @@ function populateProjectDetailsModal(project) {
   const printBtn = document.getElementById('details-print-btn');
   if (printBtn) {
     printBtn.onclick = () => {
-      // Switch to tech summary tab
-      activateTab('tech-summary');
-      
-      // Wait a moment for tab to show, then print
-      setTimeout(() => {
-        window.print();
-      }, 100);
+      // Create a new window for printing
+      openPrintWindow(project);
+    };
+  }
+  
+  // Set up print now button
+  const printNowBtn = document.getElementById('print-now-btn');
+  if (printNowBtn) {
+    printNowBtn.onclick = () => {
+      // Create a new window for printing
+      openPrintWindow(project);
+    };
+  }
+  
+  // Set up export PDF button
+  const exportPdfBtn = document.getElementById('export-pdf-btn');
+  if (exportPdfBtn) {
+    exportPdfBtn.onclick = () => {
+      showNotification('Use the "Save as PDF" option in the print dialog', 'info');
+      // Create a new window for printing
+      openPrintWindow(project);
+    };
+  }
+  
+  // Set up export Excel button
+  const exportExcelBtn = document.getElementById('export-excel-btn');
+  if (exportExcelBtn) {
+    exportExcelBtn.onclick = () => {
+      exportProjectProductsToCSV(project);
     };
   }
   
@@ -3805,6 +3830,879 @@ function activateTab(tabId) {
   
   if (selectedTab) selectedTab.classList.add('active');
   if (selectedContent) selectedContent.classList.add('active');
+}
+
+// Export project products to CSV format for Excel
+function exportProjectProductsToCSV(project) {
+  if (!project || !project.products || project.products.length === 0) {
+    showNotification('No products to export', 'error');
+    return;
+  }
+  
+  // CSV header
+  let csvContent = 'Category,Product ID,Product Name,Quantity,Unit Price,Total Price\n';
+  
+  // Get all categories
+  const categories = {};
+  if (project.productCategories) {
+    project.productCategories.forEach(cat => {
+      categories[cat.id] = cat.name;
+    });
+  }
+  
+  // Get all products by category
+  project.products.forEach(product => {
+    const productDetails = findProductById(product.productId);
+    if (productDetails) {
+      const categoryName = product.categoryId ? 
+        (categories[product.categoryId] || 'Unknown Category') : 
+        'Uncategorized';
+      
+      const totalPrice = productDetails.price * product.quantity;
+      const unitPrice = formatPrice(productDetails.price, productDetails.currency, false);
+      const totalPriceFormatted = formatPrice(totalPrice, productDetails.currency, false);
+      
+      // Escape fields that might contain commas
+      const escapeCsv = (field) => {
+        if (!field) return '';
+        const str = String(field);
+        return str.includes(',') ? `"${str}"` : str;
+      };
+      
+      // Add CSV row
+      csvContent += `${escapeCsv(categoryName)},${escapeCsv(productDetails.id)},${escapeCsv(productDetails.name)},${product.quantity},${unitPrice},${totalPriceFormatted}\n`;
+    }
+  });
+  
+  // Create Blob and download link
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${project.title.replace(/[^a-z0-9]/gi, '_')}_products.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  showNotification('CSV file exported successfully', 'success');
+}
+
+// Format price for export (without currency symbol)
+function formatPrice(price, currency = 'USD', includeCurrency = true) {
+  if (typeof price !== 'number' || isNaN(price)) {
+    return '0.00';
+  }
+  
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: includeCurrency ? 'currency' : 'decimal',
+    currency: currency || 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  
+  return formatter.format(price);
+}
+
+// Open a new window with the print-friendly content
+function openPrintWindow(project) {
+  // First try to use the Electron print to PDF functionality
+  if (window.electron && window.electron.print && window.electron.print.printToPDF) {
+    try {
+      console.log('Using Electron printToPDF API');
+      
+      // Generate HTML content
+      const printContent = generateProductPrintContent(project);
+      
+      // Create complete HTML document
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${project.title} - Product Overview</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0.25in;
+              font-size: 10pt;
+              line-height: 1.2;
+              color: black;
+            }
+            .print-view-container {
+              width: 100%;
+            }
+            .print-view-header {
+              display: flex;
+              justify-content: space-between;
+              border-bottom: 1px solid #333;
+              padding-bottom: 6pt;
+              margin-bottom: 10pt;
+            }
+            .print-view-header h2 {
+              font-size: 12pt;
+              margin: 0;
+            }
+            .print-view-meta {
+              font-size: 8pt;
+              line-height: 1.2;
+              text-align: right;
+            }
+            .print-view-description {
+              font-size: 8pt;
+              margin-bottom: 10pt;
+            }
+            .print-category {
+              margin-bottom: 10pt;
+            }
+            .print-category-header {
+              background-color: #f5f5f5;
+              border-left: 4px solid #4f46e5;
+              padding: 4pt 6pt;
+              margin-bottom: 5pt;
+              display: flex;
+              justify-content: space-between;
+              font-weight: bold;
+            }
+            .print-product-table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 8pt;
+              margin-bottom: 15px;
+            }
+            .print-product-table th {
+              background-color: #f5f5f5;
+              border-bottom: 1px solid #aaa;
+              padding: 3pt 4pt;
+              font-weight: 600;
+              text-align: left;
+            }
+            .print-product-table td {
+              border-bottom: 1px solid #ddd;
+              padding: 3pt 4pt;
+            }
+            .print-view-summary {
+              border-top: 1px solid #333;
+              padding-top: 5pt;
+              margin-top: 10pt;
+              font-size: 10pt;
+              text-align: right;
+              font-weight: bold;
+            }
+            @media print {
+              body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body id="print-frame">
+          <div class="print-view-container">
+            ${printContent}
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Call Electron's print function with the HTML content
+      window.electron.print.printToPDF({
+        html: htmlContent,
+        printOptions: {
+          marginsType: 0, // Default margins
+          printBackground: true,
+          printSelectionOnly: false,
+          landscape: false,
+          pageSize: 'A4',
+          scaleFactor: 100
+        }
+      }).then(result => {
+        if (result.success) {
+          console.log('Electron print successful:', result);
+          showNotification('File saved successfully: ' + result.path, 'success');
+        } else if (result.canceled) {
+          console.log('Print canceled by user');
+        } else if (result.fallback) {
+          console.log('Used browser print fallback');
+        } else {
+          console.error('Print failed:', result.error);
+          // Fallback to the browser-based method
+          openPrintWindowFallback(project);
+        }
+      }).catch(err => {
+        console.error('Error in Electron print:', err);
+        // Fallback to browser-based method on error
+        openPrintWindowFallback(project);
+      });
+      
+      return; // Exit early since we're handling printing via Electron
+    } catch (error) {
+      console.error('Error setting up Electron print:', error);
+      // Fall through to browser-based method
+    }
+  }
+  
+  // Fallback to browser-based method
+  openPrintWindowFallback(project);
+}
+
+function openPrintWindowFallback(project) {
+  // Create a new window
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  
+  if (!printWindow) {
+    showNotification('Please allow popups to use the print feature', 'error');
+    return;
+  }
+  
+  // Write the HTML content to the new window
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${project.title} - Product Overview</title>
+      <style>
+        @import url("../node_modules/font-awesome/css/font-awesome.min.css");
+        
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0.25in;
+          font-size: 10pt;
+          line-height: 1.2;
+          color: black;
+        }
+        .print-view-container {
+          width: 100%;
+        }
+        .print-view-header {
+          display: flex;
+          justify-content: space-between;
+          border-bottom: 1px solid #333;
+          padding-bottom: 6pt;
+          margin-bottom: 10pt;
+        }
+        .print-view-header h2 {
+          font-size: 12pt;
+          margin: 0;
+        }
+        .print-view-meta {
+          font-size: 8pt;
+          line-height: 1.2;
+          text-align: right;
+        }
+        .print-view-description {
+          font-size: 8pt;
+          margin-bottom: 10pt;
+        }
+        .print-category {
+          margin-bottom: 10pt;
+        }
+        .print-category-header {
+          background-color: #f5f5f5;
+          border-left: 4px solid #4f46e5;
+          padding: 4pt 6pt;
+          margin-bottom: 5pt;
+          display: flex;
+          justify-content: space-between;
+          font-weight: bold;
+        }
+        .print-product-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 8pt;
+          margin-bottom: 15px;
+        }
+        .print-product-table th {
+          background-color: #f5f5f5;
+          border-bottom: 1px solid #aaa;
+          padding: 3pt 4pt;
+          font-weight: 600;
+          text-align: left;
+        }
+        .print-product-table td {
+          border-bottom: 1px solid #ddd;
+          padding: 3pt 4pt;
+        }
+        .print-view-summary {
+          border-top: 1px solid #333;
+          padding-top: 5pt;
+          margin-top: 10pt;
+          font-size: 10pt;
+          text-align: right;
+          font-weight: bold;
+        }
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      </style>
+    </head>
+    <body id="print-frame">
+      <div class="print-view-container">
+  `);
+  
+  // Generate the product print view content
+  const printContent = generateProductPrintContent(project);
+  printWindow.document.write(printContent);
+  
+  // Close the HTML document
+  printWindow.document.write(`
+      </div>
+      <script>
+        // Add print and save buttons
+        document.write('<div style="text-align:center; margin:20px; display:flex; justify-content:center; gap:15px;">'+
+          '<button id="print-button" style="padding:10px 20px; background:#4f46e5; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer;"><i style="margin-right:8px;" class="fa fa-print"></i>Print</button>'+
+          '<button id="save-pdf-button" style="padding:10px 20px; background:#22c55e; color:white; border:none; border-radius:4px; font-size:16px; cursor:pointer;"><i style="margin-right:8px;" class="fa fa-file-pdf-o"></i>Save as PDF</button>'+
+        '</div>');
+        
+        // Setup print button - simple browser print
+        document.getElementById('print-button').addEventListener('click', function() {
+          // Hide the buttons before printing
+          document.querySelectorAll('button').forEach(btn => btn.style.display = 'none');
+          
+          // Use timeout to ensure buttons are hidden before print dialog appears
+          setTimeout(function() {
+            window.print();
+            
+            // Show buttons again after print dialog closes
+            setTimeout(function() {
+              document.querySelectorAll('button').forEach(btn => btn.style.display = 'inline-block');
+            }, 100);
+          }, 100);
+        });
+        
+        // Setup save PDF button - with instructions
+        document.getElementById('save-pdf-button').addEventListener('click', function() {
+          // Show instruction toast
+          const toast = document.createElement('div');
+          toast.style.position = 'fixed';
+          toast.style.top = '20px';
+          toast.style.left = '50%';
+          toast.style.transform = 'translateX(-50%)';
+          toast.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+          toast.style.color = 'white';
+          toast.style.padding = '12px 24px';
+          toast.style.borderRadius = '4px';
+          toast.style.zIndex = '9999';
+          toast.style.fontSize = '14px';
+          toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+          toast.innerHTML = '<i class="fa fa-info-circle" style="margin-right:8px;"></i>Select "Save as PDF" in the print dialog';
+          document.body.appendChild(toast);
+          
+          // Hide the buttons before printing
+          document.querySelectorAll('button').forEach(btn => btn.style.display = 'none');
+          
+          // Auto remove toast after 5 seconds
+          setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.5s';
+            setTimeout(() => toast.remove(), 500);
+          }, 5000);
+          
+          // Use timeout to ensure buttons are hidden before print dialog appears
+          setTimeout(function() {
+            window.print();
+            
+            // Show buttons again after print dialog closes
+            setTimeout(function() {
+              document.querySelectorAll('button').forEach(btn => btn.style.display = 'inline-block');
+            }, 100);
+          }, 100);
+        });
+      </script>
+    </body>
+    </html>
+  `);
+  
+  printWindow.document.close();
+}
+
+// Generate a professional print view of products sorted by categories
+function generateProductPrintContent(project) {
+  if (!project) return '';
+  
+  // Build the HTML content as a string
+  let content = '';
+  
+  // Add header
+  content += `
+    <div class="print-view-header">
+      <h2>${project.title} - Product Overview</h2>
+      <div class="print-view-meta">
+        <div><strong>Client:</strong> ${project.client || 'N/A'}</div>
+        <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
+      </div>
+    </div>
+    
+    <div class="print-view-description">
+      ${project.description || 'No description provided.'}
+    </div>
+  `;
+  
+  // Categories section
+  content += `<div id="print-view-categories">`;
+  
+  // Calculate total value for all products
+  let totalValue = 0;
+  (project.products || []).forEach(product => {
+    const productDetails = findProductById(product.productId);
+    if (productDetails) {
+      totalValue += productDetails.price * product.quantity;
+    }
+  });
+  
+  // Process categories
+  if (project.productCategories && project.productCategories.length > 0) {
+    // Sort categories
+    const sortedCategories = [...project.productCategories].sort((a, b) => a.order - b.order);
+    
+    // Create each category section
+    sortedCategories.forEach(category => {
+      // Filter products for this category
+      const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+      
+      // Skip empty categories
+      if (categoryProducts.length === 0) return;
+      
+      // Calculate category total
+      let categoryTotal = 0;
+      categoryProducts.forEach(product => {
+        const productDetails = findProductById(product.productId);
+        if (productDetails) {
+          categoryTotal += productDetails.price * product.quantity;
+        }
+      });
+      
+      // Create category section
+      content += `
+        <div class="print-category">
+          <div class="print-category-header">
+            <div class="print-category-name">${category.name}</div>
+            <div class="print-category-total">${formatMoney(categoryTotal)}</div>
+          </div>
+          
+          <table class="print-product-table">
+            <thead>
+              <tr>
+                <th style="width:15%">ID</th>
+                <th style="width:40%">Product</th>
+                <th style="width:10%">Qty</th>
+                <th style="width:15%">Unit</th>
+                <th style="width:20%">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      // Add products to table
+      categoryProducts.forEach(product => {
+        const productDetails = findProductById(product.productId);
+        if (productDetails) {
+          const totalPrice = productDetails.price * product.quantity;
+          content += `
+            <tr>
+              <td>${productDetails.id}</td>
+              <td>${productDetails.name}</td>
+              <td>${product.quantity}</td>
+              <td>${formatPrice(productDetails.price, productDetails.currency)}</td>
+              <td>${formatPrice(totalPrice, productDetails.currency)}</td>
+            </tr>
+          `;
+        }
+      });
+      
+      content += `
+            </tbody>
+          </table>
+        </div>
+      `;
+    });
+  }
+  
+  // Handle uncategorized products
+  const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
+  if (uncategorizedProducts.length > 0) {
+    // Calculate uncategorized total
+    let uncategorizedTotal = 0;
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails) {
+        uncategorizedTotal += productDetails.price * product.quantity;
+      }
+    });
+    
+    // Create uncategorized section
+    content += `
+      <div class="print-category">
+        <div class="print-category-header">
+          <div class="print-category-name">Uncategorized Products</div>
+          <div class="print-category-total">${formatMoney(uncategorizedTotal)}</div>
+        </div>
+        
+        <table class="print-product-table">
+          <thead>
+            <tr>
+              <th style="width:15%">ID</th>
+              <th style="width:40%">Product</th>
+              <th style="width:10%">Qty</th>
+              <th style="width:15%">Unit</th>
+              <th style="width:20%">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    // Add products to table
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails) {
+        const totalPrice = productDetails.price * product.quantity;
+        content += `
+          <tr>
+            <td>${productDetails.id}</td>
+            <td>${productDetails.name}</td>
+            <td>${product.quantity}</td>
+            <td>${formatPrice(productDetails.price, productDetails.currency)}</td>
+            <td>${formatPrice(totalPrice, productDetails.currency)}</td>
+          </tr>
+        `;
+      }
+    });
+    
+    content += `
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  // Close categories div
+  content += `</div>`;
+  
+  // Add summary footer
+  content += `
+    <div class="print-view-summary">
+      Total Value: ${formatMoney(totalValue)}
+    </div>
+  `;
+  
+  return content;
+}
+
+// Original function kept for compatibility
+function generateProductPrintView(project) {
+  if (!project) return;
+  
+  // Get the print view container
+  const printViewCategories = document.getElementById('print-view-categories');
+  if (!printViewCategories) return;
+  
+  // Clear previous content
+  printViewCategories.innerHTML = '';
+  
+  // Set project metadata
+  document.getElementById('print-view-title').textContent = `${project.title} - Product Overview`;
+  document.getElementById('print-view-client').textContent = project.client || 'N/A';
+  document.getElementById('print-view-date').textContent = new Date().toLocaleDateString();
+  
+  // Populate description (shortened to save space)
+  const description = project.description || 'No description provided.';
+  document.getElementById('print-view-description').textContent = description.length > 100 ? 
+    description.substring(0, 100) + '...' : description;
+  
+  // Calculate total value for all products
+  let totalValue = 0;
+  (project.products || []).forEach(product => {
+    const productDetails = findProductById(product.productId);
+    if (productDetails) {
+      totalValue += productDetails.price * product.quantity;
+    }
+  });
+  
+  // Set total in summary section
+  document.getElementById('print-view-total').textContent = `Total Value: ${formatMoney(totalValue)}`;
+  
+  // Process categories
+  if (project.productCategories && project.productCategories.length > 0) {
+    // Sort categories
+    const sortedCategories = [...project.productCategories].sort((a, b) => a.order - b.order);
+    
+    // Create each category section
+    sortedCategories.forEach(category => {
+      // Filter products for this category
+      const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+      
+      // Skip empty categories for print view
+      if (categoryProducts.length === 0) return;
+      
+      // Calculate category total
+      let categoryTotal = 0;
+      categoryProducts.forEach(product => {
+        const productDetails = findProductById(product.productId);
+        if (productDetails) {
+          categoryTotal += productDetails.price * product.quantity;
+        }
+      });
+      
+      // Create category section
+      const categorySection = document.createElement('div');
+      categorySection.className = 'print-category';
+      
+      // Create category header
+      const categoryHeader = document.createElement('div');
+      categoryHeader.className = 'print-category-header';
+      categoryHeader.innerHTML = `
+        <div class="print-category-name">${category.name}</div>
+        <div class="print-category-total">${formatMoney(categoryTotal)}</div>
+      `;
+      categorySection.appendChild(categoryHeader);
+      
+      // Create products table
+      const productsTable = document.createElement('table');
+      productsTable.className = 'print-product-table';
+      
+      // Add table header
+      productsTable.innerHTML = `
+        <thead>
+          <tr>
+            <th style="width:15%">ID</th>
+            <th style="width:40%">Product</th>
+            <th style="width:10%">Qty</th>
+            <th style="width:15%">Unit</th>
+            <th style="width:20%">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      `;
+      
+      const tableBody = productsTable.querySelector('tbody');
+      
+      // Add products to table
+      categoryProducts.forEach(product => {
+        const productDetails = findProductById(product.productId);
+        if (productDetails) {
+          const totalPrice = productDetails.price * product.quantity;
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${productDetails.id}</td>
+            <td>${productDetails.name}</td>
+            <td>${product.quantity}</td>
+            <td>${formatPrice(productDetails.price, productDetails.currency)}</td>
+            <td>${formatPrice(totalPrice, productDetails.currency)}</td>
+          `;
+          tableBody.appendChild(row);
+        }
+      });
+      
+      categorySection.appendChild(productsTable);
+      printViewCategories.appendChild(categorySection);
+    });
+  }
+  
+  // Handle uncategorized products
+  const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
+  if (uncategorizedProducts.length > 0) {
+    // Calculate uncategorized total
+    let uncategorizedTotal = 0;
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails) {
+        uncategorizedTotal += productDetails.price * product.quantity;
+      }
+    });
+    
+    // Create uncategorized section
+    const uncategorizedSection = document.createElement('div');
+    uncategorizedSection.className = 'print-category';
+    
+    // Create category header
+    const uncategorizedHeader = document.createElement('div');
+    uncategorizedHeader.className = 'print-category-header';
+    uncategorizedHeader.innerHTML = `
+      <div class="print-category-name">Uncategorized Products</div>
+      <div class="print-category-total">${formatMoney(uncategorizedTotal)}</div>
+    `;
+    uncategorizedSection.appendChild(uncategorizedHeader);
+    
+    // Create products table
+    const productsTable = document.createElement('table');
+    productsTable.className = 'print-product-table';
+    
+    // Add table header
+    productsTable.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:15%">ID</th>
+          <th style="width:40%">Product</th>
+          <th style="width:10%">Qty</th>
+          <th style="width:15%">Unit</th>
+          <th style="width:20%">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    `;
+    
+    const tableBody = productsTable.querySelector('tbody');
+    
+    // Add products to table
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails) {
+        const totalPrice = productDetails.price * product.quantity;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${productDetails.id}</td>
+          <td>${productDetails.name}</td>
+          <td>${product.quantity}</td>
+          <td>${formatPrice(productDetails.price, productDetails.currency)}</td>
+          <td>${formatPrice(totalPrice, productDetails.currency)}</td>
+        `;
+        tableBody.appendChild(row);
+      }
+    });
+    
+    uncategorizedSection.appendChild(productsTable);
+    printViewCategories.appendChild(uncategorizedSection);
+  }
+}
+
+// Initialize file menu dropdown and handlers
+function initializeFileMenu() {
+  // Setup project file menu
+  setupProjectFileMenu();
+  
+  // Close dropdown when clicking elsewhere
+  document.addEventListener('click', (e) => {
+    const dropdowns = document.querySelectorAll('.dropdown');
+    dropdowns.forEach(dropdown => {
+      if (dropdown.classList.contains('show') && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('show');
+      }
+    });
+  });
+}
+
+// Setup the project window's file menu
+function setupProjectFileMenu() {
+  const projectFileMenuBtn = document.getElementById('project-file-menu-btn');
+  const projectFileDropdown = document.getElementById('project-file-dropdown');
+  
+  // Toggle dropdown on click
+  if (projectFileMenuBtn) {
+    projectFileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dropdown = projectFileMenuBtn.parentElement;
+      dropdown.classList.toggle('show');
+    });
+  }
+  
+  // Handle project file menu actions
+  if (projectFileDropdown) {
+    // Print Products
+    const printBtn = document.getElementById('project-file-print');
+    if (printBtn) {
+      printBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const currentProject = getCurrentProject();
+        openPrintWindow(currentProject);
+      });
+    }
+    
+    // Save as PDF
+    const savePdfBtn = document.getElementById('project-file-save-pdf');
+    if (savePdfBtn) {
+      savePdfBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const currentProject = getCurrentProject();
+        showNotification('Use the "Save as PDF" option in the print dialog', 'info');
+        openPrintWindow(currentProject);
+      });
+    }
+    
+    // Export to Excel
+    const exportExcelBtn = document.getElementById('project-file-export-excel');
+    if (exportExcelBtn) {
+      exportExcelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const currentProject = getCurrentProject();
+        exportProjectProductsToCSV(currentProject);
+      });
+    }
+  }
+}
+
+// Helper function to get the current active project
+function getCurrentProject() {
+  // Check if we're in a project modal
+  const projectModal = document.getElementById('project-details-modal');
+  if (projectModal && projectModal.classList.contains('active') && projectModal.dataset.projectId) {
+    const projectId = projectModal.dataset.projectId;
+    // For now, just return a reference to the active project from the modal
+    return {
+      id: projectId,
+      title: document.getElementById('project-details-title').textContent,
+      client: document.getElementById('details-client').textContent,
+      description: document.getElementById('details-description').textContent,
+      products: getActiveProjectProducts(),
+      productCategories: getActiveProjectCategories()
+    };
+  }
+  
+  // Otherwise return a mock project so we can test the feature
+  return {
+    id: 'demo-project',
+    title: 'Demo Project',
+    client: 'Demo Client',
+    description: 'This is a demo project for testing the print feature.',
+    products: allProducts.slice(0, 5).map(p => ({
+      productId: p.id,
+      quantity: 1
+    })),
+    productCategories: [
+      { id: 'cat1', name: 'Hardware', order: 0 },
+      { id: 'cat2', name: 'Software', order: 1 },
+      { id: 'cat3', name: 'Services', order: 2 }
+    ]
+  };
+}
+
+// Helper to get products from active project view
+function getActiveProjectProducts() {
+  const products = [];
+  const productElements = document.querySelectorAll('.product-item');
+  productElements.forEach((el, index) => {
+    const productId = el.querySelector('.product-item-id')?.textContent;
+    const quantity = parseInt(el.querySelector('.product-item-quantity')?.textContent) || 1;
+    if (productId) {
+      products.push({
+        productId,
+        quantity,
+        categoryId: el.closest('.category-products')?.parentElement?.dataset?.categoryId
+      });
+    }
+  });
+  return products;
+}
+
+// Helper to get categories from active project view
+function getActiveProjectCategories() {
+  const categories = [];
+  const categoryElements = document.querySelectorAll('.project-product-category');
+  categoryElements.forEach((el, index) => {
+    const categoryId = el.dataset.categoryId;
+    const categoryName = el.querySelector('.category-name')?.textContent;
+    if (categoryId && categoryName) {
+      categories.push({
+        id: categoryId,
+        name: categoryName,
+        order: index
+      });
+    }
+  });
+  return categories;
 }
 
 // Initialize product categories in settings
@@ -3989,8 +4887,16 @@ function populateProductsTab(project) {
   productsEl.innerHTML = '';
   categoriesEl.innerHTML = '';
   
-  let totalValue = 0;
   let totalProducts = 0;
+  
+  // Calculate total value for all products in this project
+  let totalValue = 0;
+  (project.products || []).forEach(product => {
+    const productDetails = findProductById(product.productId);
+    if (productDetails) {
+      totalValue += productDetails.price * product.quantity;
+    }
+  });
   
   // Initialize or get project categories
   if (!project.productCategories) {
@@ -4017,13 +4923,26 @@ function populateProductsTab(project) {
     categoryEl.className = 'project-product-category';
     categoryEl.dataset.categoryId = category.id;
     
-    // Create category header
+    // Filter products for this category
+    const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+    
+    // Calculate category total first
+    let categoryTotal = 0;
+    categoryProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails) {
+        categoryTotal += productDetails.price * product.quantity;
+      }
+    });
+
+    // Create category header with inline total
     const headerEl = document.createElement('div');
     headerEl.className = 'category-header';
     headerEl.innerHTML = `
       <div class="category-name">
         <i class="fa fa-folder${category.expanded ? '-open' : ''}"></i>
         ${category.name}
+        <span class="category-total">${formatMoney(categoryTotal)}</span>
       </div>
       <div class="category-actions">
         <button class="btn-icon toggle-category" title="${category.expanded ? 'Collapse' : 'Expand'} category">
@@ -4082,8 +5001,7 @@ function populateProductsTab(project) {
     productsContainerEl.className = 'category-products';
     productsContainerEl.style.display = category.expanded ? 'block' : 'none';
     
-    // Filter products for this category
-    const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+    // We already filtered products for this category above
     totalProducts += categoryProducts.length;
     
     // If no products in this category, show empty message
@@ -4097,7 +5015,7 @@ function populateProductsTab(project) {
     } else {
       // Add products to this category
       categoryProducts.forEach((product, index) => {
-        const productEl = createProductElement(product, index, totalValue);
+        const productEl = createProductElement(product, index);
         if (productEl) {
           productsContainerEl.appendChild(productEl);
         }
@@ -4126,20 +5044,29 @@ function populateProductsTab(project) {
   const productCountDisplay = document.getElementById('product-count-display');
   if (productCountDisplay) {
     const count = (project.products || []).length;
-    productCountDisplay.textContent = `${count} ${count === 1 ? 'product' : 'products'}`;
+    productCountDisplay.textContent = `${count} ${count === 1 ? 'product' : 'products'} - Total: ${formatMoney(totalValue)}`;
   }
   
   if (uncategorizedProducts.length > 0) {
     totalProducts += uncategorizedProducts.length;
     
-    productsEl.innerHTML = '<h3>Uncategorized Products</h3>';
+    // Calculate uncategorized total
+    let uncategorizedTotal = 0;
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails) {
+        uncategorizedTotal += productDetails.price * product.quantity;
+      }
+    });
+    
+    productsEl.innerHTML = `<h3>Uncategorized Products <span class="category-total">${formatMoney(uncategorizedTotal)}</span></h3>`;
     
     // Create container for uncategorized products
     const uncategorizedContainer = document.createElement('div');
     uncategorizedContainer.className = 'uncategorized-products';
     
     uncategorizedProducts.forEach((product, index) => {
-      const productEl = createProductElement(product, index, totalValue);
+      const productEl = createProductElement(product, index);
       if (productEl) {
         // Make draggable for categorization
         productEl.draggable = true;
@@ -4155,8 +5082,12 @@ function populateProductsTab(project) {
         });
         
         uncategorizedContainer.appendChild(productEl);
+        
+        // We already calculated the total above
       }
     });
+    
+    // We're now showing the summary in the header
     
     productsEl.appendChild(uncategorizedContainer);
   } else if ((project.products || []).length === 0) {
@@ -4200,7 +5131,7 @@ function populateProductsTab(project) {
 }
 
 // Create a product element for the products list
-function createProductElement(product, index, totalValue) {
+function createProductElement(product, index) {
   const productDetails = findProductById(product.productId);
   
   // Create a container for the product
@@ -4210,7 +5141,6 @@ function createProductElement(product, index, totalValue) {
   
   if (productDetails) {
     const totalPrice = productDetails.price * product.quantity;
-    totalValue += totalPrice;
     
     productItem.innerHTML = `
       <div class="product-item-header">

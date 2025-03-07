@@ -93,6 +93,74 @@ body.platform-linux .logo {
   margin-right: 8px; /* Add some spacing from the edge */
 }
 
+/* Dropdown menu styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-button {
+  background-color: transparent;
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  -webkit-app-region: no-drag;
+}
+
+.dropdown-button:hover {
+  background-color: rgba(var(--accent-rgb), 0.1);
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: var(--bg-secondary);
+  min-width: 180px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.dropdown-content a {
+  color: var(--text-primary);
+  padding: 8px 12px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.dropdown-content a i {
+  color: var(--accent);
+  width: 16px;
+  text-align: center;
+}
+
+.dropdown-content a:hover {
+  background-color: rgba(var(--accent-rgb), 0.1);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: var(--border);
+  margin: 4px 0;
+}
+
+.dropdown.show .dropdown-content {
+  display: block;
+}
+
 .btn-icon {
   background: none;
   border: none;
@@ -2133,6 +2201,19 @@ tr:hover {
   gap: 1rem;
 }
 
+/* Special styling for dropdowns in modals */
+.modal-header-actions .dropdown-button {
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  background-color: rgba(var(--accent-rgb), 0.1);
+}
+
+.modal-header-actions .dropdown-content {
+  top: 100%;
+  right: 0;
+  z-index: 1100;
+}
+
 .button-icon {
   background: none;
   border: none;
@@ -2480,46 +2561,212 @@ tr:hover {
 }
 
 /* Print Styles for Technical Summary */
+/* Print styles for product overview */
+.print-view-container {
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.print-view-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #333;
+}
+
+.print-view-meta {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.print-view-description {
+  margin-bottom: 2rem;
+}
+
+.print-category {
+  margin-bottom: 2rem;
+}
+
+.print-category-header {
+  background-color: #f5f5f5;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  border-left: 4px solid #4f46e5;
+}
+
+.print-category-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.print-category-total {
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.print-product-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.print-product-table th {
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  padding: 0.75rem;
+  background-color: #fafafa;
+}
+
+.print-product-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.print-view-summary {
+  margin-top: 2rem;
+  text-align: right;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding-top: 1rem;
+  border-top: 2px solid #333;
+}
+
+.print-view-footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.print-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.print-actions .button {
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.export-pdf-btn {
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+.export-pdf-btn:hover {
+  background-color: #4338ca;
+}
+
+/* Print specific styles that will be removed from normal view */
+.print-only {
+  display: none;
+}
+
+/* Special print view styles */
 @media print {
   body * {
     visibility: hidden;
   }
   
-  .modal-content-wide, 
-  .modal-content-wide * {
+  #print-frame, #print-frame * {
     visibility: visible;
   }
   
-  .modal-content-wide {
+  #print-frame {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
-    background-color: white;
-    color: black;
   }
-  
-  .modal-header-actions,
-  .modal-tabs,
-  .modal-actions,
-  .tech-summary-actions,
-  button {
-    display: none !important;
-  }
-  
-  .tech-summary-section input,
-  .tech-summary-section textarea {
-    border: none;
-    font-family: inherit;
-    font-size: 1rem;
-    padding: 0;
-    background: none;
-  }
-  
-  .tech-summary-section label {
-    font-weight: bold;
-    margin-top: 1rem;
-  }
+}
+
+/* Print View Container Styles */
+.print-view-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-size: 10pt;
+  line-height: 1.2;
+}
+
+.print-category {
+  margin-bottom: 10pt;
+}
+
+.print-product-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8pt;
+  margin-bottom: 15px;
+}
+
+.print-product-table th {
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #aaa;
+  padding: 3pt 4pt;
+  font-weight: 600;
+  text-align: left;
+}
+
+.print-product-table td {
+  border-bottom: 1px solid #ddd;
+  padding: 3pt 4pt;
+}
+
+.print-category-header {
+  background-color: #f5f5f5;
+  border-left: 4px solid #4f46e5;
+  padding: 4pt 6pt;
+  margin-bottom: 5pt;
+  display: flex;
+  justify-content: space-between;
+}
+
+.print-view-header {
+  border-bottom: 1px solid #333;
+  padding-bottom: 6pt;
+  margin-bottom: 10pt;
+  display: flex;
+  justify-content: space-between;
+}
+
+.print-view-header h2 {
+  font-size: 12pt;
+  margin: 0;
+}
+
+.print-view-meta {
+  font-size: 8pt;
+  line-height: 1.2;
+}
+
+.print-view-description {
+  font-size: 8pt;
+  margin-bottom: 10pt;
+  max-height: 20pt;
+  overflow: hidden;
+}
+
+.print-view-summary {
+  border-top: 1px solid #333;
+  padding-top: 5pt;
+  margin-top: 10pt;
+  font-size: 10pt;
+  text-align: right;
+}
 }
 
 .empty-message {
@@ -2669,10 +2916,13 @@ tr:hover {
   display: flex;
   justify-content: space-between;
   margin-bottom: 1rem;
-  padding: 0.5rem 0;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
-  color: var(--text-secondary);
+  border-radius: 6px;
+  background-color: rgba(var(--accent-rgb), 0.05);
+  color: var(--text-primary);
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .project-product-category {
@@ -2681,6 +2931,18 @@ tr:hover {
   border-radius: 8px;
   margin-bottom: 1.5rem;
   overflow: hidden;
+}
+
+.uncategorized-products {
+  padding: 0.5rem;
+  background-color: var(--bg-primary);
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+h3 .category-total {
+  font-weight: normal;
+  vertical-align: middle;
 }
 
 .category-header {
@@ -2692,6 +2954,16 @@ tr:hover {
   border-bottom: 1px solid var(--border);
 }
 
+.category-summary {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .category-name {
   font-weight: 600;
   display: flex;
@@ -2701,6 +2973,15 @@ tr:hover {
 .category-name i {
   margin-right: 0.5rem;
   color: var(--accent);
+}
+
+.category-total {
+  margin-left: 0.75rem;
+  color: var(--accent);
+  font-size: 0.85rem;
+  background-color: rgba(var(--accent-rgb), 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
 }
 
 .category-actions {

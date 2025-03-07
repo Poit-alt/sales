@@ -96,6 +96,107 @@ app.whenReady().then(() => {
 // Setup IPC communication between main and renderer processes
 function setupIPC() {
   console.log('Setting up IPC handlers...');
+  
+  // Handle print-to-pdf requests
+  ipcMain.handle('print-to-pdf', async (event, options) => {
+    try {
+      // Create a new hidden BrowserWindow for printing
+      const win = new BrowserWindow({
+        width: 800,
+        height: 600,
+        show: false,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+      
+      // Load the options.url or a data URL
+      if (options.html) {
+        // Load HTML directly
+        await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(options.html)}`);
+      } else if (options.url) {
+        // Load from URL
+        await win.loadURL(options.url);
+      } else {
+        throw new Error('Either html or url must be provided');
+      }
+      
+      // Wait for page to fully load
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Get the web contents
+      const webContents = win.webContents;
+      
+      // Print to PDF
+      const data = await webContents.printToPDF({
+        marginsType: 0,
+        printBackground: true,
+        printSelectionOnly: false,
+        landscape: false,
+        pageSize: 'A4',
+        scaleFactor: 100,
+        ...options.printOptions
+      });
+      
+      // If a path is provided, save the PDF to disk
+      if (options.path) {
+        await fs.promises.writeFile(options.path, data);
+        
+        // Open the saved PDF
+        if (options.openFile) {
+          const { shell } = require('electron');
+          shell.openPath(options.path);
+        }
+        
+        return { success: true, path: options.path };
+      }
+      
+      // Otherwise prompt the user to save the PDF
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Save PDF',
+        defaultPath: options.defaultPath || path.join(app.getPath('documents'), 'print.pdf'),
+        filters: [
+          { name: 'PDF Files', extensions: ['pdf'] }
+        ]
+      });
+      
+      if (canceled) {
+        return { success: false, canceled: true };
+      }
+      
+      // Save the PDF to the selected path
+      await fs.promises.writeFile(filePath, data);
+      
+      // Close the window
+      win.close();
+      
+      return { success: true, path: filePath };
+    } catch (error) {
+      console.error('Error printing to PDF:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // Handle window control commands
+  ipcMain.on('window-control', (event, command) => {
+    switch (command) {
+      case 'close':
+        BrowserWindow.fromWebContents(event.sender).close();
+        break;
+      case 'minimize':
+        BrowserWindow.fromWebContents(event.sender).minimize();
+        break;
+      case 'maximize':
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win.isMaximized()) {
+          win.unmaximize();
+        } else {
+          win.maximize();
+        }
+        break;
+    }
+  });
   // Example IPC handler for data requests
   ipcMain.on('getData', (event, args) => {
     // Here you would fetch data from database or files

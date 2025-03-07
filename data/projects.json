@@ -128,22 +128,11 @@
       "priority": "medium",
       "status": "Active",
       "deadline": "2025-04-07",
-      "description": "efs",
+      "description": "Naut OSV",
       "budget": 0,
       "teamSize": 1,
       "tasks": [],
-      "products": [
-        {
-          "productId": "PRD-004",
-          "quantity": 1,
-          "categoryId": "cat-m7zar4964v9m3"
-        },
-        {
-          "productId": "PRD-004",
-          "quantity": 1,
-          "categoryId": "hardware"
-        }
-      ],
+      "products": [],
       "completion": 0,
       "createdAt": "2025-03-07T21:38:12.175Z",
       "createdBy": "Peter",
@@ -185,12 +174,26 @@
           "description": "Modified project products. New total: 2 products.",
           "date": "2025-03-07T21:39:03.008Z",
           "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 3 products.",
+          "date": "2025-03-07T21:56:42.897Z",
+          "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 7 products.",
+          "date": "2025-03-07T22:18:13.775Z",
+          "author": "Peter"
         }
-      ]
+      ],
+      "updatedAt": "2025-03-07T22:42:22.944Z",
+      "updatedBy": "Peter"
     }
   ],
   "meta": {
-    "updatedAt": "2025-03-07T21:39:03.008Z",
+    "updatedAt": "2025-03-07T22:42:22.945Z",
     "updatedBy": "Peter",
     "version": "1.0"
   }

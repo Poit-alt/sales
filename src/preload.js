@@ -34,5 +34,24 @@ contextBridge.exposeInMainWorld('electron', {
       console.log('Invoking save-database-file with:', { fileName, data: typeof data });
       return ipcRenderer.invoke('save-database-file', { fileName, data });
     }
-  }
+  },
+  
+  // Printing and system dialog API
+  print: {
+    printToPDF: async (options = {}) => {
+      try {
+        // Always use the IPC approach since remote module is deprecated
+        // and may not be available in newer Electron versions
+        return await ipcRenderer.invoke('print-to-pdf', options);
+      } catch (error) {
+        // Fallback to browser print
+        console.error('PDF export error:', error);
+        window.print();
+        return { success: false, error: error.message, fallback: true };
+      }
+    }
+  },
+  
+  // Window control
+  closeWindow: () => ipcRenderer.send('window-control', 'close')
 });

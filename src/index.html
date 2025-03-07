@@ -14,7 +14,7 @@
     <header>
       <div class="logo">ProjectHub</div>
       <div class="header-actions">
-        <!-- Dark mode toggle moved to sidebar footer -->
+        <!-- Header actions can be added here -->
       </div>
     </header>
     
@@ -628,6 +628,14 @@
         <div class="modal-header">
           <h2 id="project-details-title">Project Details</h2>
           <div class="modal-header-actions">
+            <div class="dropdown">
+              <button class="dropdown-button" id="project-file-menu-btn"><i class="fa fa-bars"></i> File</button>
+              <div class="dropdown-content" id="project-file-dropdown">
+                <a href="#" id="project-file-print"><i class="fa fa-print"></i> Print Products</a>
+                <a href="#" id="project-file-save-pdf"><i class="fa fa-file-pdf-o"></i> Save as PDF</a>
+                <a href="#" id="project-file-export-excel"><i class="fa fa-file-excel-o"></i> Export to Excel</a>
+              </div>
+            </div>
             <button id="details-print-btn" class="button-icon" title="Print Technical Summary">
               <i class="fa fa-print"></i>
             </button>
@@ -639,6 +647,7 @@
           <button type="button" class="modal-tab" data-tab="tech-summary">Technical Summary</button>
           <button type="button" class="modal-tab" data-tab="products">Products</button>
           <button type="button" class="modal-tab" data-tab="revisions">Revisions</button>
+          <button type="button" class="modal-tab" data-tab="print-view" id="print-view-tab" style="display: none;">Print View</button>
         </div>
         <div class="modal-body">
           <!-- Overview Tab -->
@@ -801,6 +810,45 @@
               
               <div class="project-revisions-list" id="project-revisions">
                 <div class="empty-message">No revisions saved yet</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Print View Tab (for professional printing) -->
+          <div class="modal-tab-content" data-tab="print-view">
+            <div class="print-view-container">
+              <div class="print-view-header">
+                <h2 id="print-view-title">Project Product Overview</h2>
+                <div class="print-view-meta">
+                  <div><strong>Client:</strong> <span id="print-view-client"></span></div>
+                  <div><strong>Date:</strong> <span id="print-view-date"></span></div>
+                </div>
+              </div>
+              
+              <div class="print-view-description">
+                <p id="print-view-description"></p>
+              </div>
+              
+              <div id="print-view-categories">
+                <!-- Categories and products will be rendered here -->
+              </div>
+              
+              <div class="print-view-summary">
+                <div id="print-view-total"></div>
+              </div>
+              
+              <div class="print-view-footer">
+                <div class="print-actions">
+                  <button id="print-now-btn" class="button">
+                    <i class="fa fa-print"></i> Print Now
+                  </button>
+                  <button id="export-pdf-btn" class="button export-pdf-btn">
+                    <i class="fa fa-file-pdf-o"></i> Save as PDF
+                  </button>
+                  <button id="export-excel-btn" class="button">
+                    <i class="fa fa-file-excel-o"></i> Export to Excel
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -30,6 +30,16 @@ document.addEventListener('DOMContentLoaded', () => {
     productsTab: document.getElementById('products-tab')
   });
   
+  // Handle clicking outside of project details modal to close it
+  const detailsModal = document.getElementById('project-details-modal');
+  if (detailsModal) {
+    detailsModal.addEventListener('click', (e) => {
+      if (e.target === detailsModal) {
+        closeProjectDetailsModal(detailsModal);
+      }
+    });
+  }
+  
   // Add event listeners for modal tabs
   const modalTabs = document.querySelectorAll('.modal-tab');
   modalTabs.forEach(tab => {
@@ -166,6 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Load user settings on startup
   loadUserSettings();
+  
+  // Load currency rates on startup
+  loadCurrencyRates();
   
   // Debug: Initialize settings menu functionality
   window.switchToSettingsTab = function() {
@@ -2015,6 +2028,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // Handle saving currency rates
+  const saveCurrencyRatesBtn = document.getElementById('save-currency-rates');
+  if (saveCurrencyRatesBtn) {
+    saveCurrencyRatesBtn.addEventListener('click', () => {
+      saveCurrencyRates();
+    });
+  }
+  
   // Handle saving product categories
   const saveCategoriesBtn = document.getElementById('save-categories');
   if (saveCategoriesBtn) {
@@ -2097,6 +2118,84 @@ function saveProductCategories() {
   showNotification('Product categories saved successfully', 'success');
   
   return categories;
+}
+
+// Save currency rates
+function saveCurrencyRates() {
+  const currencyRates = {
+    USD: 1.0, // Base currency is always 1.0
+    EUR: parseFloat(document.getElementById('rate-EUR').value) || 0.93,
+    GBP: parseFloat(document.getElementById('rate-GBP').value) || 0.78,
+    NOK: parseFloat(document.getElementById('rate-NOK').value) || 10.5,
+    SEK: parseFloat(document.getElementById('rate-SEK').value) || 10.4,
+    DKK: parseFloat(document.getElementById('rate-DKK').value) || 6.9
+  };
+  
+  // Save to localStorage
+  localStorage.setItem('currencyRates', JSON.stringify(currencyRates));
+  
+  // Show success message
+  showNotification('Currency rates saved successfully', 'success');
+  
+  return currencyRates;
+}
+
+// Load currency rates
+function loadCurrencyRates() {
+  const rateEUR = document.getElementById('rate-EUR');
+  const rateGBP = document.getElementById('rate-GBP');
+  const rateNOK = document.getElementById('rate-NOK');
+  const rateSEK = document.getElementById('rate-SEK');
+  const rateDKK = document.getElementById('rate-DKK');
+  
+  // Get saved rates from localStorage
+  const savedRates = localStorage.getItem('currencyRates');
+  if (savedRates) {
+    try {
+      const rates = JSON.parse(savedRates);
+      if (rateEUR) rateEUR.value = rates.EUR || 0.93;
+      if (rateGBP) rateGBP.value = rates.GBP || 0.78;
+      if (rateNOK) rateNOK.value = rates.NOK || 10.5;
+      if (rateSEK) rateSEK.value = rates.SEK || 10.4;
+      if (rateDKK) rateDKK.value = rates.DKK || 6.9;
+    } catch (err) {
+      console.error('Error loading currency rates:', err);
+    }
+  }
+}
+
+// Convert amount from one currency to another
+function convertCurrency(amount, fromCurrency, toCurrency) {
+  // Get saved rates from localStorage
+  const savedRates = localStorage.getItem('currencyRates');
+  let rates = {
+    USD: 1.0,
+    EUR: 0.93,
+    GBP: 0.78,
+    NOK: 10.5,
+    SEK: 10.4,
+    DKK: 6.9
+  };
+  
+  if (savedRates) {
+    try {
+      const parsedRates = JSON.parse(savedRates);
+      rates = { ...rates, ...parsedRates };
+    } catch (err) {
+      console.error('Error parsing currency rates:', err);
+    }
+  }
+  
+  // If currencies are the same, no conversion needed
+  if (fromCurrency === toCurrency) {
+    return amount;
+  }
+  
+  // Convert to USD as intermediate
+  const amountInUSD = amount / rates[fromCurrency];
+  
+  // Convert from USD to target currency
+  return amountInUSD * rates[toCurrency];
 }
 
 // Generate a unique ID for categories
@@ -2241,6 +2340,13 @@ function openNewProjectModal() {
       // Format date as YYYY-MM-DD
       const formattedDate = nextMonth.toISOString().split('T')[0];
       deadlineInput.value = formattedDate;
+    }
+    
+    // Set default currency from last saved preference
+    const currencySelect = document.getElementById('project-currency');
+    if (currencySelect) {
+      const lastUsedCurrency = localStorage.getItem('lastUsedPrintCurrency') || 'USD';
+      currencySelect.value = lastUsedCurrency;
     }
     
     // Clear tasks
@@ -3565,6 +3671,15 @@ function navigateToProjectManagement(project) {
   const detailsModal = document.getElementById('project-details-modal');
   if (!detailsModal) return;
   
+  // Store the current active tab before opening the modal
+  const currentActiveTab = document.querySelector('.sidebar-nav a.active');
+  const currentActiveTabId = currentActiveTab ? currentActiveTab.dataset.tab : null;
+  
+  // Also store this on the modal for retrieval when closing
+  if (currentActiveTabId) {
+    detailsModal.dataset.previousActiveTab = currentActiveTabId;
+  }
+  
   // Store the current project to the modal for future access
   detailsModal.dataset.projectId = project.id;
   
@@ -3652,11 +3767,22 @@ function populateProjectDetailsModal(project) {
     const totalProducts = project.products.length;
     let validProducts = 0;
     
+    // Get project currency for conversion
+    const projectCurrency = project.currency || 'USD';
+    
     project.products.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
         validProducts++;
-        totalValue += productDetails.price * product.quantity;
+        
+        // Convert product price to project currency
+        const sourceCurrency = productDetails.currency || 'USD';
+        const convertedPrice = convertCurrency(
+          productDetails.price,
+          sourceCurrency,
+          projectCurrency
+        );
+        totalValue += convertedPrice * product.quantity;
         
         const category = productDetails.category || 'Uncategorized';
         if (categoryCounts[category]) {
@@ -3671,7 +3797,7 @@ function populateProjectDetailsModal(project) {
     productSummary.innerHTML = `
       <div class="product-summary-info">
         <p>This project includes ${totalProducts} product${totalProducts !== 1 ? 's' : ''} 
-        with a total value of ${formatMoney(totalValue)}.</p>
+        with a total value of ${formatMoney(totalValue, projectCurrency)}.</p>
         
         <div class="product-summary-categories">
           <strong>Categories:</strong>
@@ -3688,7 +3814,7 @@ function populateProjectDetailsModal(project) {
     
     // Show total value
     const totalEl = document.getElementById('details-products-total');
-    totalEl.textContent = `Total Product Value: ${formatMoney(totalValue)}`;
+    totalEl.textContent = `Total Product Value: ${formatMoney(totalValue, projectCurrency)}`;
     totalEl.style.display = 'block';
   } else {
     productsSummaryEl.innerHTML = '<div class="empty-message">No products for this project</div>';
@@ -3732,6 +3858,24 @@ function populateProjectDetailsModal(project) {
     };
   }
   
+  // Initialize currency selector with project's currency or stored preference
+  const printCurrencySelect = document.getElementById('print-currency');
+  if (printCurrencySelect) {
+    // First try to use the project's default currency
+    if (project && project.currency) {
+      printCurrencySelect.value = project.currency;
+    } else {
+      // Fall back to last used currency from localStorage, or use USD as default
+      const lastUsedCurrency = localStorage.getItem('lastUsedPrintCurrency') || 'USD';
+      printCurrencySelect.value = lastUsedCurrency;
+    }
+    
+    // Save the selected currency when changed
+    printCurrencySelect.addEventListener('change', () => {
+      localStorage.setItem('lastUsedPrintCurrency', printCurrencySelect.value);
+    });
+  }
+
   // Set up print now button
   const printNowBtn = document.getElementById('print-now-btn');
   if (printNowBtn) {
@@ -3745,6 +3889,7 @@ function populateProjectDetailsModal(project) {
   const exportPdfBtn = document.getElementById('export-pdf-btn');
   if (exportPdfBtn) {
     exportPdfBtn.onclick = () => {
+      showNotification(`Exporting PDF in ${printCurrencySelect.value} currency`, 'info');
       showNotification('Use the "Save as PDF" option in the print dialog', 'info');
       // Create a new window for printing
       openPrintWindow(project);
@@ -3755,6 +3900,7 @@ function populateProjectDetailsModal(project) {
   const exportExcelBtn = document.getElementById('export-excel-btn');
   if (exportExcelBtn) {
     exportExcelBtn.onclick = () => {
+      showNotification(`Exporting Excel in ${printCurrencySelect.value} currency`, 'info');
       exportProjectProductsToCSV(project);
     };
   }
@@ -3763,7 +3909,7 @@ function populateProjectDetailsModal(project) {
   const closeBtn = document.getElementById('details-close');
   if (closeBtn && detailsModal) {
     closeBtn.onclick = () => {
-      detailsModal.classList.remove('active');
+      closeProjectDetailsModal(detailsModal);
     };
   }
   
@@ -3772,7 +3918,7 @@ function populateProjectDetailsModal(project) {
     const modalCloseBtn = detailsModal.querySelector('.modal-close');
     if (modalCloseBtn) {
       modalCloseBtn.onclick = () => {
-        detailsModal.classList.remove('active');
+        closeProjectDetailsModal(detailsModal);
       };
     }
   }
@@ -3782,6 +3928,15 @@ function populateProjectDetailsModal(project) {
 function showProjectDetails(project) {
   const detailsModal = document.getElementById('project-details-modal');
   if (!detailsModal) return;
+  
+  // Store the current active tab before opening the modal
+  const currentActiveTab = document.querySelector('.sidebar-nav a.active');
+  const currentActiveTabId = currentActiveTab ? currentActiveTab.dataset.tab : null;
+  
+  // Also store this on the modal for retrieval when closing
+  if (currentActiveTabId) {
+    detailsModal.dataset.previousActiveTab = currentActiveTabId;
+  }
   
   // Store the current project to the modal for future access
   detailsModal.dataset.projectId = project.id;
@@ -3814,6 +3969,23 @@ function setupModalTabs() {
   });
 }
 
+// Close project details modal and restore previous tab state
+function closeProjectDetailsModal(detailsModal) {
+  // Hide the modal
+  detailsModal.classList.remove('active');
+  
+  // Restore the previous active tab if it was stored
+  if (detailsModal.dataset.previousActiveTab) {
+    const previousTabId = detailsModal.dataset.previousActiveTab;
+    const previousTabLink = document.querySelector(`.sidebar-nav a[data-tab="${previousTabId}"]`);
+    
+    if (previousTabLink) {
+      // Manually trigger a click to restore the tab
+      previousTabLink.click();
+    }
+  }
+}
+
 // Activate a specific tab
 function activateTab(tabId) {
   // Remove active class from all tabs and contents
@@ -3838,8 +4010,24 @@ function exportProjectProductsToCSV(project) {
     return;
   }
   
+  // Get the selected output currency
+  const printCurrencySelect = document.getElementById('print-currency');
+  let outputCurrency = printCurrencySelect ? printCurrencySelect.value : 'USD';
+  
+  // Set a default value if needed
+  if (printCurrencySelect) {
+    if (!printCurrencySelect.value && project && project.currency) {
+      // Default to project currency if available
+      printCurrencySelect.value = project.currency;
+      outputCurrency = project.currency;
+    } else if (!printCurrencySelect.value) {
+      // Fallback to USD
+      printCurrencySelect.value = 'USD';
+    }
+  }
+  
   // CSV header
-  let csvContent = 'Category,Product ID,Product Name,Quantity,Unit Price,Total Price\n';
+  let csvContent = `Category,Product ID,Product Name,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency})\n`;
   
   // Get all categories
   const categories = {};
@@ -3857,9 +4045,16 @@ function exportProjectProductsToCSV(project) {
         (categories[product.categoryId] || 'Unknown Category') : 
         'Uncategorized';
       
-      const totalPrice = productDetails.price * product.quantity;
-      const unitPrice = formatPrice(productDetails.price, productDetails.currency, false);
-      const totalPriceFormatted = formatPrice(totalPrice, productDetails.currency, false);
+      // Convert prices to output currency
+      const convertedUnitPrice = convertCurrency(
+        productDetails.price, 
+        productDetails.currency || 'USD', 
+        outputCurrency
+      );
+      const totalPrice = convertedUnitPrice * product.quantity;
+      
+      const unitPrice = formatPrice(convertedUnitPrice, outputCurrency, false);
+      const totalPriceFormatted = formatPrice(totalPrice, outputCurrency, false);
       
       // Escape fields that might contain commas
       const escapeCsv = (field) => {
@@ -3878,13 +4073,13 @@ function exportProjectProductsToCSV(project) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `${project.title.replace(/[^a-z0-9]/gi, '_')}_products.csv`);
+  link.setAttribute('download', `${project.title.replace(/[^a-z0-9]/gi, '_')}_products_${outputCurrency}.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   
-  showNotification('CSV file exported successfully', 'success');
+  showNotification(`CSV file exported successfully in ${outputCurrency}`, 'success');
 }
 
 // Format price for export (without currency symbol)
@@ -4221,16 +4416,33 @@ function openPrintWindowFallback(project) {
 function generateProductPrintContent(project) {
   if (!project) return '';
   
+  // Get the selected output currency
+  const printCurrencySelect = document.getElementById('print-currency');
+  let outputCurrency = printCurrencySelect ? printCurrencySelect.value : 'USD';
+
+  // Set a default value if needed
+  if (printCurrencySelect) {
+    if (!printCurrencySelect.value && project && project.currency) {
+      // Default to project currency if available
+      printCurrencySelect.value = project.currency;
+      outputCurrency = project.currency;
+    } else if (!printCurrencySelect.value) {
+      // Fallback to USD
+      printCurrencySelect.value = 'USD';
+    }
+  }
+  
   // Build the HTML content as a string
   let content = '';
   
-  // Add header
+  // Add header with currency information
   content += `
     <div class="print-view-header">
       <h2>${project.title} - Product Overview</h2>
       <div class="print-view-meta">
         <div><strong>Client:</strong> ${project.client || 'N/A'}</div>
         <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
+        <div><strong>Currency:</strong> ${outputCurrency}</div>
       </div>
     </div>
     
@@ -4242,12 +4454,18 @@ function generateProductPrintContent(project) {
   // Categories section
   content += `<div id="print-view-categories">`;
   
-  // Calculate total value for all products
+  // Calculate total value for all products, with currency conversion
   let totalValue = 0;
   (project.products || []).forEach(product => {
     const productDetails = findProductById(product.productId);
     if (productDetails) {
-      totalValue += productDetails.price * product.quantity;
+      // Convert price to output currency
+      const convertedUnitPrice = convertCurrency(
+        productDetails.price, 
+        productDetails.currency || 'USD', 
+        outputCurrency
+      );
+      totalValue += convertedUnitPrice * product.quantity;
     }
   });
   
@@ -4264,12 +4482,18 @@ function generateProductPrintContent(project) {
       // Skip empty categories
       if (categoryProducts.length === 0) return;
       
-      // Calculate category total
+      // Calculate category total with currency conversion
       let categoryTotal = 0;
       categoryProducts.forEach(product => {
         const productDetails = findProductById(product.productId);
         if (productDetails) {
-          categoryTotal += productDetails.price * product.quantity;
+          // Convert price to output currency
+          const convertedUnitPrice = convertCurrency(
+            productDetails.price, 
+            productDetails.currency || 'USD', 
+            outputCurrency
+          );
+          categoryTotal += convertedUnitPrice * product.quantity;
         }
       });
       
@@ -4278,7 +4502,7 @@ function generateProductPrintContent(project) {
         <div class="print-category">
           <div class="print-category-header">
             <div class="print-category-name">${category.name}</div>
-            <div class="print-category-total">${formatMoney(categoryTotal)}</div>
+            <div class="print-category-total">${formatPrice(categoryTotal, outputCurrency)}</div>
           </div>
           
           <table class="print-product-table">
@@ -4287,25 +4511,32 @@ function generateProductPrintContent(project) {
                 <th style="width:15%">ID</th>
                 <th style="width:40%">Product</th>
                 <th style="width:10%">Qty</th>
-                <th style="width:15%">Unit</th>
-                <th style="width:20%">Total</th>
+                <th style="width:15%">Unit (${outputCurrency})</th>
+                <th style="width:20%">Total (${outputCurrency})</th>
               </tr>
             </thead>
             <tbody>
       `;
       
-      // Add products to table
+      // Add products to table with currency conversion
       categoryProducts.forEach(product => {
         const productDetails = findProductById(product.productId);
         if (productDetails) {
-          const totalPrice = productDetails.price * product.quantity;
+          // Convert price to output currency
+          const convertedUnitPrice = convertCurrency(
+            productDetails.price, 
+            productDetails.currency || 'USD', 
+            outputCurrency
+          );
+          const totalPrice = convertedUnitPrice * product.quantity;
+          
           content += `
             <tr>
               <td>${productDetails.id}</td>
               <td>${productDetails.name}</td>
               <td>${product.quantity}</td>
-              <td>${formatPrice(productDetails.price, productDetails.currency)}</td>
-              <td>${formatPrice(totalPrice, productDetails.currency)}</td>
+              <td>${formatPrice(convertedUnitPrice, outputCurrency)}</td>
+              <td>${formatPrice(totalPrice, outputCurrency)}</td>
             </tr>
           `;
         }
@@ -4322,12 +4553,18 @@ function generateProductPrintContent(project) {
   // Handle uncategorized products
   const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
   if (uncategorizedProducts.length > 0) {
-    // Calculate uncategorized total
+    // Calculate uncategorized total with currency conversion
     let uncategorizedTotal = 0;
     uncategorizedProducts.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
-        uncategorizedTotal += productDetails.price * product.quantity;
+        // Convert price to output currency
+        const convertedUnitPrice = convertCurrency(
+          productDetails.price, 
+          productDetails.currency || 'USD', 
+          outputCurrency
+        );
+        uncategorizedTotal += convertedUnitPrice * product.quantity;
       }
     });
     
@@ -4336,7 +4573,7 @@ function generateProductPrintContent(project) {
       <div class="print-category">
         <div class="print-category-header">
           <div class="print-category-name">Uncategorized Products</div>
-          <div class="print-category-total">${formatMoney(uncategorizedTotal)}</div>
+          <div class="print-category-total">${formatPrice(uncategorizedTotal, outputCurrency)}</div>
         </div>
         
         <table class="print-product-table">
@@ -4345,25 +4582,32 @@ function generateProductPrintContent(project) {
               <th style="width:15%">ID</th>
               <th style="width:40%">Product</th>
               <th style="width:10%">Qty</th>
-              <th style="width:15%">Unit</th>
-              <th style="width:20%">Total</th>
+              <th style="width:15%">Unit (${outputCurrency})</th>
+              <th style="width:20%">Total (${outputCurrency})</th>
             </tr>
           </thead>
           <tbody>
     `;
     
-    // Add products to table
+    // Add products to table with currency conversion
     uncategorizedProducts.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
-        const totalPrice = productDetails.price * product.quantity;
+        // Convert price to output currency
+        const convertedUnitPrice = convertCurrency(
+          productDetails.price, 
+          productDetails.currency || 'USD', 
+          outputCurrency
+        );
+        const totalPrice = convertedUnitPrice * product.quantity;
+        
         content += `
           <tr>
             <td>${productDetails.id}</td>
             <td>${productDetails.name}</td>
             <td>${product.quantity}</td>
-            <td>${formatPrice(productDetails.price, productDetails.currency)}</td>
-            <td>${formatPrice(totalPrice, productDetails.currency)}</td>
+            <td>${formatPrice(convertedUnitPrice, outputCurrency)}</td>
+            <td>${formatPrice(totalPrice, outputCurrency)}</td>
           </tr>
         `;
       }
@@ -4382,7 +4626,7 @@ function generateProductPrintContent(project) {
   // Add summary footer
   content += `
     <div class="print-view-summary">
-      Total Value: ${formatMoney(totalValue)}
+      Total Value: ${formatPrice(totalValue, outputCurrency)}
     </div>
   `;
   
@@ -4410,17 +4654,25 @@ function generateProductPrintView(project) {
   document.getElementById('print-view-description').textContent = description.length > 100 ? 
     description.substring(0, 100) + '...' : description;
   
-  // Calculate total value for all products
+  // Calculate total value for all products, converting to project currency
   let totalValue = 0;
+  const projectCurrency = project.currency || 'USD';
   (project.products || []).forEach(product => {
     const productDetails = findProductById(product.productId);
     if (productDetails) {
-      totalValue += productDetails.price * product.quantity;
+      // Convert product price to project currency
+      const sourceCurrency = productDetails.currency || 'USD';
+      const convertedPrice = convertCurrency(
+        productDetails.price,
+        sourceCurrency,
+        projectCurrency
+      );
+      totalValue += convertedPrice * product.quantity;
     }
   });
   
-  // Set total in summary section
-  document.getElementById('print-view-total').textContent = `Total Value: ${formatMoney(totalValue)}`;
+  // Set total in summary section using project currency
+  document.getElementById('print-view-total').textContent = `Total Value: ${formatMoney(totalValue, projectCurrency)}`;
   
   // Process categories
   if (project.productCategories && project.productCategories.length > 0) {
@@ -4435,12 +4687,19 @@ function generateProductPrintView(project) {
       // Skip empty categories for print view
       if (categoryProducts.length === 0) return;
       
-      // Calculate category total
+      // Calculate category total, converting to project currency
       let categoryTotal = 0;
       categoryProducts.forEach(product => {
         const productDetails = findProductById(product.productId);
         if (productDetails) {
-          categoryTotal += productDetails.price * product.quantity;
+          // Convert product price to project currency
+          const sourceCurrency = productDetails.currency || 'USD';
+          const convertedPrice = convertCurrency(
+            productDetails.price,
+            sourceCurrency,
+            projectCurrency
+          );
+          categoryTotal += convertedPrice * product.quantity;
         }
       });
       
@@ -4888,12 +5147,20 @@ function populateProductsTab(project) {
   
   let totalProducts = 0;
   
-  // Calculate total value for all products in this project
+  // Calculate total value for all products in this project, converting to project currency
   let totalValue = 0;
+  const projectCurrency = project.currency || 'USD';
   (project.products || []).forEach(product => {
     const productDetails = findProductById(product.productId);
     if (productDetails) {
-      totalValue += productDetails.price * product.quantity;
+      // Convert product price to project currency
+      const sourceCurrency = productDetails.currency || 'USD';
+      const convertedPrice = convertCurrency(
+        productDetails.price,
+        sourceCurrency,
+        projectCurrency
+      );
+      totalValue += convertedPrice * product.quantity;
     }
   });
   
@@ -4925,12 +5192,19 @@ function populateProductsTab(project) {
     // Filter products for this category
     const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
     
-    // Calculate category total first
+    // Calculate category total first, converting to project currency
     let categoryTotal = 0;
     categoryProducts.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
-        categoryTotal += productDetails.price * product.quantity;
+        // Convert product price to project currency
+        const sourceCurrency = productDetails.currency || 'USD';
+        const convertedPrice = convertCurrency(
+          productDetails.price,
+          sourceCurrency,
+          projectCurrency
+        );
+        categoryTotal += convertedPrice * product.quantity;
       }
     });
 
@@ -4941,7 +5215,7 @@ function populateProductsTab(project) {
       <div class="category-name">
         <i class="fa fa-folder${category.expanded ? '-open' : ''}"></i>
         ${category.name}
-        <span class="category-total">${formatMoney(categoryTotal)}</span>
+        <span class="category-total">${formatMoney(categoryTotal, project.currency || 'USD')}</span>
       </div>
       <div class="category-actions">
         <button class="btn-icon toggle-category" title="${category.expanded ? 'Collapse' : 'Expand'} category">
@@ -5014,7 +5288,7 @@ function populateProductsTab(project) {
     } else {
       // Add products to this category
       categoryProducts.forEach((product, index) => {
-        const productEl = createProductElement(product, index);
+        const productEl = createProductElement(product, index, project.currency);
         if (productEl) {
           productsContainerEl.appendChild(productEl);
         }
@@ -5043,29 +5317,37 @@ function populateProductsTab(project) {
   const productCountDisplay = document.getElementById('product-count-display');
   if (productCountDisplay) {
     const count = (project.products || []).length;
-    productCountDisplay.textContent = `${count} ${count === 1 ? 'product' : 'products'} - Total: ${formatMoney(totalValue)}`;
+    const projectCurrency = project.currency || 'USD';
+    productCountDisplay.textContent = `${count} ${count === 1 ? 'product' : 'products'} - Total: ${formatMoney(totalValue, projectCurrency)}`;
   }
   
   if (uncategorizedProducts.length > 0) {
     totalProducts += uncategorizedProducts.length;
     
-    // Calculate uncategorized total
+    // Calculate uncategorized total, converting to project currency
     let uncategorizedTotal = 0;
     uncategorizedProducts.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
-        uncategorizedTotal += productDetails.price * product.quantity;
+        // Convert product price to project currency
+        const sourceCurrency = productDetails.currency || 'USD';
+        const convertedPrice = convertCurrency(
+          productDetails.price,
+          sourceCurrency,
+          projectCurrency
+        );
+        uncategorizedTotal += convertedPrice * product.quantity;
       }
     });
     
-    productsEl.innerHTML = `<h3>Uncategorized Products <span class="category-total">${formatMoney(uncategorizedTotal)}</span></h3>`;
+    productsEl.innerHTML = `<h3>Uncategorized Products <span class="category-total">${formatMoney(uncategorizedTotal, project.currency || 'USD')}</span></h3>`;
     
     // Create container for uncategorized products
     const uncategorizedContainer = document.createElement('div');
     uncategorizedContainer.className = 'uncategorized-products';
     
     uncategorizedProducts.forEach((product, index) => {
-      const productEl = createProductElement(product, index);
+      const productEl = createProductElement(product, index, project.currency);
       if (productEl) {
         // Make draggable for categorization
         productEl.draggable = true;
@@ -5098,7 +5380,7 @@ function populateProductsTab(project) {
   // Show total value
   const totalEl = document.getElementById('details-products-total-bar');
   if (totalEl) {
-    totalEl.textContent = `Total Product Value: ${formatMoney(totalValue)}`;
+    totalEl.textContent = `Total Product Value: ${formatMoney(totalValue, project.currency || 'USD')}`;
   }
   
   // Set up "Add Product" button
@@ -5130,7 +5412,7 @@ function populateProductsTab(project) {
 }
 
 // Create a product element for the products list
-function createProductElement(product, index) {
+function createProductElement(product, index, projectCurrency) {
   const productDetails = findProductById(product.productId);
   
   // Create a container for the product
@@ -5139,23 +5421,52 @@ function createProductElement(product, index) {
   productItem.dataset.index = index;
   
   if (productDetails) {
-    const totalPrice = productDetails.price * product.quantity;
+    // Get the source currency of the product
+    const sourceCurrency = productDetails.currency || 'USD';
     
-    productItem.innerHTML = `
-      <div class="product-item-header">
-        <div class="product-item-name">${productDetails.name}</div>
-        <div class="product-item-details">
-          <div class="product-item-id">${productDetails.id}</div>
-          <div class="product-item-price">${product.quantity} x ${formatPrice(productDetails.price, productDetails.currency)} = ${formatPrice(totalPrice, productDetails.currency)}</div>
+    // If project currency is provided, convert prices to it
+    if (projectCurrency && projectCurrency !== sourceCurrency) {
+      // Convert unit price to project currency
+      const convertedUnitPrice = convertCurrency(
+        productDetails.price,
+        sourceCurrency,
+        projectCurrency
+      );
+      const totalPrice = convertedUnitPrice * product.quantity;
+      
+      productItem.innerHTML = `
+        <div class="product-item-header">
+          <div class="product-item-name">${productDetails.name}</div>
+          <div class="product-item-details">
+            <div class="product-item-id">${productDetails.id}</div>
+            <div class="product-item-price">${product.quantity} x ${formatPrice(convertedUnitPrice, projectCurrency)} = ${formatPrice(totalPrice, projectCurrency)}</div>
+          </div>
         </div>
-      </div>
-      <div class="product-actions">
-        <div class="product-item-quantity">${product.quantity}x</div>
-        <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
-          <i class="fa fa-trash"></i>
-        </button>
-      </div>
-    `;
+        <div class="product-actions">
+          <div class="product-item-quantity">${product.quantity}x</div>
+          <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
+            <i class="fa fa-trash"></i>
+          </button>
+        </div>`;
+    } else {
+      // Use original currency if no project currency provided
+      const totalPrice = productDetails.price * product.quantity;
+      
+      productItem.innerHTML = `
+        <div class="product-item-header">
+          <div class="product-item-name">${productDetails.name}</div>
+          <div class="product-item-details">
+            <div class="product-item-id">${productDetails.id}</div>
+            <div class="product-item-price">${product.quantity} x ${formatPrice(productDetails.price, sourceCurrency)} = ${formatPrice(totalPrice, sourceCurrency)}</div>
+          </div>
+        </div>
+        <div class="product-actions">
+          <div class="product-item-quantity">${product.quantity}x</div>
+          <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
+            <i class="fa fa-trash"></i>
+          </button>
+        </div>`;
+    }
     
     // Add event listener for remove button
     const removeButton = productItem.querySelector('.remove-product');
@@ -5665,6 +5976,10 @@ function populateRevisionsTab(project) {
   const revisionsEl = document.getElementById('project-revisions');
   revisionsEl.innerHTML = '';
   
+  // Hide comparison tools by default
+  document.getElementById('revision-comparison-tools').style.display = 'none';
+  document.getElementById('comparison-results').style.display = 'none';
+  
   if (project.revisions && project.revisions.length > 0) {
     // Sort revisions by date (newest first)
     const sortedRevisions = [...project.revisions].sort((a, b) => {
@@ -5674,6 +5989,7 @@ function populateRevisionsTab(project) {
     sortedRevisions.forEach((revision, index) => {
       const revisionItem = document.createElement('div');
       revisionItem.className = 'revision-item';
+      revisionItem.dataset.revisionIndex = index;
       
       // Format date
       const revisionDate = new Date(revision.date);
@@ -5689,6 +6005,9 @@ function populateRevisionsTab(project) {
         <div class="revision-header">
           <div class="revision-title">${revision.title}</div>
           <div class="revision-actions">
+            <button class="btn-icon compare-revision" data-index="${index}" title="Compare to Current">
+              <i class="fa fa-exchange"></i>
+            </button>
             <button class="btn-icon print-revision" data-index="${index}" title="Print Revision">
               <i class="fa fa-print"></i>
             </button>
@@ -5702,7 +6021,18 @@ function populateRevisionsTab(project) {
       `;
       
       revisionsEl.appendChild(revisionItem);
+      
+      // Add event listener for quick comparison button
+      const compareBtn = revisionItem.querySelector('.compare-revision');
+      if (compareBtn) {
+        compareBtn.addEventListener('click', () => {
+          quickCompareRevision(project, index);
+        });
+      }
     });
+    
+    // Set up comparison dropdowns
+    setupComparisonDropdowns(project, sortedRevisions);
   } else {
     revisionsEl.innerHTML = '<div class="empty-message">No revisions saved yet</div>';
   }
@@ -5713,6 +6043,31 @@ function populateRevisionsTab(project) {
     createRevisionBtn.onclick = () => {
       showCreateRevisionModal();
     };
+  }
+  
+  // Set up Compare Revisions button
+  const compareRevisionsBtn = document.getElementById('compare-revisions-btn');
+  if (compareRevisionsBtn) {
+    compareRevisionsBtn.onclick = () => {
+      toggleComparisonTools();
+    };
+  }
+  
+  // Set up Close Comparison button
+  const closeComparisonBtn = document.getElementById('close-comparison-btn');
+  if (closeComparisonBtn) {
+    closeComparisonBtn.addEventListener('click', () => {
+      document.getElementById('revision-comparison-tools').style.display = 'none';
+      document.getElementById('comparison-results').style.display = 'none';
+    });
+  }
+  
+  // Set up Run Comparison button
+  const runComparisonBtn = document.getElementById('run-comparison-btn');
+  if (runComparisonBtn) {
+    runComparisonBtn.addEventListener('click', () => {
+      runDetailedComparison(project);
+    });
   }
 }
 
@@ -5805,13 +6160,361 @@ function addProjectRevision(project, title, description) {
     project.revisions = [];
   }
   
-  // Add the revision
+  // Get a snapshot of the current project products
+  const productSnapshot = [];
+  if (project.products && project.products.length > 0) {
+    project.products.forEach(product => {
+      // Find product details
+      const productDetails = findProductById(product.productId);
+      if (productDetails) {
+        productSnapshot.push({
+          productId: product.productId,
+          name: productDetails.name,
+          price: productDetails.price,
+          currency: productDetails.currency,
+          quantity: product.quantity,
+          categoryId: product.categoryId
+        });
+      }
+    });
+  }
+  
+  // Add the revision with product snapshot
   project.revisions.push({
     title: title,
     description: description,
     date: new Date().toISOString(),
-    author: getCurrentUserName()
+    author: getCurrentUserName(),
+    productSnapshot: productSnapshot
   });
+}
+
+// Toggle comparison tools visibility
+function toggleComparisonTools() {
+  const comparisonTools = document.getElementById('revision-comparison-tools');
+  const currentDisplay = comparisonTools.style.display;
+  
+  comparisonTools.style.display = currentDisplay === 'none' ? 'block' : 'none';
+  
+  // Hide results when toggling tools
+  document.getElementById('comparison-results').style.display = 'none';
+}
+
+// Setup comparison dropdowns
+function setupComparisonDropdowns(project, sortedRevisions) {
+  const fromSelect = document.getElementById('compare-from');
+  const toSelect = document.getElementById('compare-to');
+  
+  // Clear existing options except for "Current Version"
+  while (fromSelect.options.length > 1) {
+    fromSelect.options.remove(1);
+  }
+  
+  while (toSelect.options.length > 1) {
+    toSelect.options.remove(1);
+  }
+  
+  // Add options for each revision
+  sortedRevisions.forEach((revision, index) => {
+    const revisionDate = new Date(revision.date);
+    const formattedDate = revisionDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    const optionText = `${revision.title} (${formattedDate})`;
+    
+    // Add to "from" dropdown
+    const fromOption = document.createElement('option');
+    fromOption.value = index;
+    fromOption.textContent = optionText;
+    fromSelect.appendChild(fromOption);
+    
+    // Add to "to" dropdown
+    const toOption = document.createElement('option');
+    toOption.value = index;
+    toOption.textContent = optionText;
+    toSelect.appendChild(toOption);
+  });
+  
+  // Set default selections
+  if (sortedRevisions.length > 0) {
+    fromSelect.value = sortedRevisions.length - 1; // Oldest revision
+    toSelect.value = 'current'; // Current version
+  }
+}
+
+// Quick comparison function (revision to current)
+function quickCompareRevision(project, revisionIndex) {
+  // Get the revision
+  const sortedRevisions = [...project.revisions].sort((a, b) => {
+    return new Date(b.date) - new Date(a.date);
+  });
+  
+  const revision = sortedRevisions[revisionIndex];
+  if (!revision) return;
+  
+  // Show comparison tools
+  document.getElementById('revision-comparison-tools').style.display = 'block';
+  
+  // Set dropdown values
+  document.getElementById('compare-from').value = revisionIndex;
+  document.getElementById('compare-to').value = 'current';
+  
+  // Run the comparison
+  runDetailedComparison(project);
+}
+
+// Run detailed comparison
+function runDetailedComparison(project) {
+  const fromSelect = document.getElementById('compare-from');
+  const toSelect = document.getElementById('compare-to');
+  
+  const fromValue = fromSelect.value;
+  const toValue = toSelect.value;
+  
+  let fromProducts = [];
+  let toProducts = [];
+  
+  // Get sorted revisions
+  const sortedRevisions = [...project.revisions].sort((a, b) => {
+    return new Date(b.date) - new Date(a.date);
+  });
+  
+  // Get "from" products
+  if (fromValue === 'current') {
+    // Current project products
+    fromProducts = getCurrentProjectProducts(project);
+  } else {
+    const fromRevision = sortedRevisions[parseInt(fromValue)];
+    if (fromRevision && fromRevision.productSnapshot) {
+      fromProducts = fromRevision.productSnapshot;
+    }
+  }
+  
+  // Get "to" products
+  if (toValue === 'current') {
+    // Current project products
+    toProducts = getCurrentProjectProducts(project);
+  } else {
+    const toRevision = sortedRevisions[parseInt(toValue)];
+    if (toRevision && toRevision.productSnapshot) {
+      toProducts = toRevision.productSnapshot;
+    }
+  }
+  
+  // Generate comparison content
+  generateComparisonContent(fromProducts, toProducts, fromValue, toValue, sortedRevisions);
+}
+
+// Get current project products with details
+function getCurrentProjectProducts(project) {
+  const currentProducts = [];
+  
+  if (project.products && project.products.length > 0) {
+    project.products.forEach(product => {
+      // Find product details
+      const productDetails = findProductById(product.productId);
+      if (productDetails) {
+        currentProducts.push({
+          productId: product.productId,
+          name: productDetails.name,
+          price: productDetails.price,
+          currency: productDetails.currency,
+          quantity: product.quantity,
+          categoryId: product.categoryId
+        });
+      }
+    });
+  }
+  
+  return currentProducts;
+}
+
+// Generate comparison content
+function generateComparisonContent(fromProducts, toProducts, fromValue, toValue, sortedRevisions) {
+  const comparisonContent = document.getElementById('comparison-content');
+  const resultsContainer = document.getElementById('comparison-results');
+  
+  // Get version names
+  let fromName = "Current Version";
+  let toName = "Current Version";
+  
+  if (fromValue !== 'current') {
+    const revision = sortedRevisions[parseInt(fromValue)];
+    if (revision) {
+      const date = new Date(revision.date).toLocaleDateString();
+      fromName = `${revision.title} (${date})`;
+    }
+  }
+  
+  if (toValue !== 'current') {
+    const revision = sortedRevisions[parseInt(toValue)];
+    if (revision) {
+      const date = new Date(revision.date).toLocaleDateString();
+      toName = `${revision.title} (${date})`;
+    }
+  }
+  
+  // Start building comparison HTML
+  let comparisonHTML = `
+    <div class="comparison-summary">
+      <p>Comparing <strong>${fromName}</strong> to <strong>${toName}</strong></p>
+    </div>
+  `;
+  
+  // Create a map of all products (combining both versions)
+  const allProductIds = new Set();
+  fromProducts.forEach(product => allProductIds.add(product.productId));
+  toProducts.forEach(product => allProductIds.add(product.productId));
+  
+  if (allProductIds.size === 0) {
+    comparisonHTML += `<p>No products found in either version.</p>`;
+  } else {
+    // Build comparison table
+    comparisonHTML += `
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>${fromName}</th>
+            <th>${toName}</th>
+            <th>Difference</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    // Convert Sets to Arrays for easier processing
+    const allProductIdsArray = Array.from(allProductIds);
+    
+    // Get fromProducts and toProducts as maps for easier lookup
+    const fromProductsMap = new Map();
+    fromProducts.forEach(product => {
+      fromProductsMap.set(product.productId, product);
+    });
+    
+    const toProductsMap = new Map();
+    toProducts.forEach(product => {
+      toProductsMap.set(product.productId, product);
+    });
+    
+    // Generate rows for each product
+    allProductIdsArray.forEach(productId => {
+      const fromProduct = fromProductsMap.get(productId);
+      const toProduct = toProductsMap.get(productId);
+      
+      let rowClass = '';
+      if (fromProduct && !toProduct) rowClass = 'removed';
+      if (!fromProduct && toProduct) rowClass = 'added';
+      
+      // Calculate price and quantity differences if both exist
+      let priceDiffHTML = '';
+      let quantityDiffHTML = '';
+      
+      if (fromProduct && toProduct) {
+        // Check for price changes
+        if (fromProduct.price !== toProduct.price) {
+          rowClass = 'changed';
+          const priceDiff = toProduct.price - fromProduct.price;
+          const percentChange = ((priceDiff / fromProduct.price) * 100).toFixed(1);
+          
+          const changeClass = priceDiff > 0 ? 'price-increase' : 'price-decrease';
+          const signChar = priceDiff > 0 ? '+' : '';
+          
+          priceDiffHTML = `
+            <span class="price-change-indicator ${changeClass}">
+              ${signChar}${percentChange}%
+            </span>
+          `;
+        }
+        
+        // Check for quantity changes
+        if (fromProduct.quantity !== toProduct.quantity) {
+          rowClass = 'changed';
+          const quantityDiff = toProduct.quantity - fromProduct.quantity;
+          
+          const changeClass = quantityDiff > 0 ? 'price-increase' : 'price-decrease';
+          const signChar = quantityDiff > 0 ? '+' : '';
+          
+          quantityDiffHTML = `
+            <span class="quantity-change-indicator ${changeClass}">
+              ${signChar}${quantityDiff}
+            </span>
+          `;
+        }
+      }
+      
+      // Format from product info
+      let fromProductInfo = 'Not in this version';
+      if (fromProduct) {
+        const formattedPrice = formatPrice(fromProduct.price, fromProduct.currency);
+        fromProductInfo = `
+          <div>${fromProduct.name}</div>
+          <div>Price: ${formattedPrice}</div>
+          <div>Quantity: ${fromProduct.quantity}</div>
+        `;
+      }
+      
+      // Format to product info
+      let toProductInfo = 'Not in this version';
+      if (toProduct) {
+        const formattedPrice = formatPrice(toProduct.price, toProduct.currency);
+        toProductInfo = `
+          <div>${toProduct.name}</div>
+          <div>Price: ${formattedPrice}</div>
+          <div>Quantity: ${toProduct.quantity}</div>
+        `;
+      }
+      
+      // Format difference column
+      let differenceInfo = '';
+      if (fromProduct && !toProduct) {
+        differenceInfo = '<span class="highlight-removed">Removed</span>';
+      } else if (!fromProduct && toProduct) {
+        differenceInfo = '<span class="highlight-added">Added</span>';
+      } else if (fromProduct && toProduct) {
+        const differences = [];
+        
+        if (fromProduct.price !== toProduct.price) {
+          const priceDiff = toProduct.price - fromProduct.price;
+          const formattedDiff = formatPrice(Math.abs(priceDiff), toProduct.currency);
+          differences.push(`Price ${priceDiff > 0 ? 'increased' : 'decreased'} by ${formattedDiff} ${priceDiffHTML}`);
+        }
+        
+        if (fromProduct.quantity !== toProduct.quantity) {
+          const quantityDiff = toProduct.quantity - fromProduct.quantity;
+          differences.push(`Quantity ${quantityDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(quantityDiff)} ${quantityDiffHTML}`);
+        }
+        
+        if (differences.length === 0) {
+          differenceInfo = 'No changes';
+        } else {
+          differenceInfo = differences.join('<br>');
+        }
+      }
+      
+      // Add the row
+      comparisonHTML += `
+        <tr class="${rowClass}">
+          <td>${productId}</td>
+          <td>${fromProductInfo}</td>
+          <td>${toProductInfo}</td>
+          <td>${differenceInfo}</td>
+        </tr>
+      `;
+    });
+    
+    comparisonHTML += `
+        </tbody>
+      </table>
+    `;
+  }
+  
+  // Set the content and display the results
+  comparisonContent.innerHTML = comparisonHTML;
+  resultsContainer.style.display = 'block';
 }
 
 // Save project to database
@@ -5831,10 +6534,10 @@ async function saveProjectToDatabase(project) {
 }
 
 // Format money value
-function formatMoney(amount) {
+function formatMoney(amount, currency = 'USD') {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD'
+    currency: currency
   }).format(amount);
 }
 
@@ -5853,6 +6556,12 @@ function openEditProjectModal(project) {
     document.getElementById('project-status').value = project.status || 'Active';
     document.getElementById('project-deadline').value = project.deadline || '';
     document.getElementById('project-description').value = project.description || '';
+    
+    // Set currency if available, or default to USD
+    const currencySelect = document.getElementById('project-currency');
+    if (currencySelect) {
+      currencySelect.value = project.currency || 'USD';
+    }
     
     // Clear and populate tasks
     const tasksContainer = document.getElementById('tasks-container');
@@ -5907,6 +6616,7 @@ function initializeProjectForm() {
       const status = document.getElementById('project-status').value;
       const deadline = document.getElementById('project-deadline').value;
       const description = document.getElementById('project-description').value;
+      const currency = document.getElementById('project-currency').value || 'USD';
       
       // Get tasks
       const taskInputs = document.querySelectorAll('#tasks-container .task-input');
@@ -5944,6 +6654,7 @@ function initializeProjectForm() {
             status,
             deadline,
             description,
+            currency,
             tasks,
             products,
             updatedAt: new Date().toISOString(),
@@ -5968,6 +6679,7 @@ function initializeProjectForm() {
           status,
           deadline,
           description,
+          currency,
           tasks,
           products,
           completion: 0,

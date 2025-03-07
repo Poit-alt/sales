@@ -381,8 +381,8 @@
       "description": "Modern POS system with hardware and software components",
       "category": "Business Management",
       "subCategory": "Point of Sale",
-      "price": 1299,
-      "currency": "USD",
+      "price": 1400,
+      "currency": "NOK",
       "subscriptionType": "Annual",
       "vatRate": 25,
       "stockStatus": {
@@ -446,7 +446,16 @@
         "lastUpdated": "2023-03-10T16:40:45Z"
       },
       "status": "Active",
-      "popularity": 4.8
+      "popularity": 4.8,
+      "priceHistory": [
+        {
+          "date": "2025-03-07T23:05:21.200Z",
+          "price": 1400,
+          "currency": "USD",
+          "changedBy": "Anonymous"
+        }
+      ],
+      "isBundle": false
     },
     {
       "id": "PRD-005",

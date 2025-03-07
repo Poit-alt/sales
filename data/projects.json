@@ -134,12 +134,17 @@
         {
           "productId": "PRD-004",
           "quantity": 1,
+          "categoryId": "hardware"
+        },
+        {
+          "productId": "BDL-002",
+          "quantity": 1,
           "categoryId": "software"
         },
         {
           "productId": "BDL-002",
           "quantity": 1,
-          "categoryId": "services"
+          "categoryId": "software"
         }
       ],
       "completion": 0,
@@ -195,12 +200,110 @@
           "description": "Added another bundle",
           "date": "2025-03-07T22:58:47.264Z",
           "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 2 products.",
+          "date": "2025-03-07T23:06:59.769Z",
+          "author": "Peter",
+          "productSnapshot": [
+            {
+              "productId": "PRD-004",
+              "name": "Point of Sale Terminal",
+              "price": 1400,
+              "currency": "NOK",
+              "quantity": 1,
+              "categoryId": "software"
+            },
+            {
+              "productId": "BDL-002",
+              "name": "Financial Management Bundle",
+              "price": 1599,
+              "currency": "USD",
+              "quantity": 1,
+              "categoryId": "services"
+            }
+          ]
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 1 products.",
+          "date": "2025-03-07T23:09:50.270Z",
+          "author": "Peter",
+          "productSnapshot": [
+            {
+              "productId": "PRD-004",
+              "name": "Point of Sale Terminal",
+              "price": 1400,
+              "currency": "NOK",
+              "quantity": 1,
+              "categoryId": "services"
+            }
+          ]
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 1 products.",
+          "date": "2025-03-07T23:10:12.503Z",
+          "author": "Peter",
+          "productSnapshot": [
+            {
+              "productId": "PRD-004",
+              "name": "Point of Sale Terminal",
+              "price": 1400,
+              "currency": "NOK",
+              "quantity": 1,
+              "categoryId": "services"
+            }
+          ]
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 0 products.",
+          "date": "2025-03-07T23:34:58.501Z",
+          "author": "Peter",
+          "productSnapshot": []
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 3 products.",
+          "date": "2025-03-07T23:36:52.036Z",
+          "author": "Peter",
+          "productSnapshot": [
+            {
+              "productId": "PRD-004",
+              "name": "Point of Sale Terminal",
+              "price": 1400,
+              "currency": "NOK",
+              "quantity": 1,
+              "categoryId": "hardware"
+            },
+            {
+              "productId": "BDL-002",
+              "name": "Financial Management Bundle",
+              "price": 1599,
+              "currency": "USD",
+              "quantity": 1,
+              "categoryId": "software"
+            },
+            {
+              "productId": "BDL-002",
+              "name": "Financial Management Bundle",
+              "price": 1599,
+              "currency": "USD",
+              "quantity": 1,
+              "categoryId": "software"
+            }
+          ]
         }
-      ]
+      ],
+      "currency": "USD",
+      "updatedAt": "2025-03-07T23:39:09.204Z",
+      "updatedBy": "Peter"
     }
   ],
   "meta": {
-    "updatedAt": "2025-03-07T22:58:47.264Z",
+    "updatedAt": "2025-03-07T23:39:09.205Z",
     "updatedBy": "Peter",
     "version": "1.0"
   }

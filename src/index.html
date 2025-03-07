@@ -423,6 +423,43 @@
                   </button>
                 </div>
               </div>
+              
+              <div class="settings-group">
+                <label>Currency Conversion Rates</label>
+                <p class="settings-description">
+                  Set conversion rates relative to USD (1 USD = X units of currency).
+                  These rates will be used when converting between currencies in reports.
+                </p>
+                <div class="currency-rates-container">
+                  <div class="currency-rate-row">
+                    <label>USD (US Dollar)</label>
+                    <input type="number" id="rate-USD" value="1.00" disabled>
+                  </div>
+                  <div class="currency-rate-row">
+                    <label>EUR (Euro)</label>
+                    <input type="number" id="rate-EUR" value="0.93" step="0.01" min="0.01">
+                  </div>
+                  <div class="currency-rate-row">
+                    <label>GBP (British Pound)</label>
+                    <input type="number" id="rate-GBP" value="0.78" step="0.01" min="0.01">
+                  </div>
+                  <div class="currency-rate-row">
+                    <label>NOK (Norwegian Krone)</label>
+                    <input type="number" id="rate-NOK" value="10.5" step="0.01" min="0.01">
+                  </div>
+                  <div class="currency-rate-row">
+                    <label>SEK (Swedish Krona)</label>
+                    <input type="number" id="rate-SEK" value="10.4" step="0.01" min="0.01">
+                  </div>
+                  <div class="currency-rate-row">
+                    <label>DKK (Danish Krone)</label>
+                    <input type="number" id="rate-DKK" value="6.9" step="0.01" min="0.01">
+                  </div>
+                </div>
+                <div class="settings-actions">
+                  <button id="save-currency-rates" class="button">Save Currency Rates</button>
+                </div>
+              </div>
             </div>
             
             <div class="settings-section">
@@ -798,7 +835,40 @@
                   <button id="create-revision-btn" class="button button-sm">
                     <i class="fa fa-plus"></i> Create New Revision
                   </button>
+                  <button id="compare-revisions-btn" class="button button-sm">
+                    <i class="fa fa-exchange"></i> Compare Revisions
+                  </button>
                 </div>
+              </div>
+              
+              <!-- Revision comparison tools (hidden by default) -->
+              <div id="revision-comparison-tools" class="revision-comparison-tools" style="display: none;">
+                <div class="comparison-selectors">
+                  <div class="comparison-selector">
+                    <label for="compare-from">From:</label>
+                    <select id="compare-from">
+                      <option value="current">Current Version</option>
+                      <!-- Options will be added dynamically -->
+                    </select>
+                  </div>
+                  <div class="comparison-selector">
+                    <label for="compare-to">To:</label>
+                    <select id="compare-to">
+                      <option value="current">Current Version</option>
+                      <!-- Options will be added dynamically -->
+                    </select>
+                  </div>
+                  <button id="run-comparison-btn" class="button button-sm">Compare</button>
+                  <button id="close-comparison-btn" class="button button-sm button-outline">
+                    <i class="fa fa-times"></i> Close
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Comparison results (hidden by default) -->
+              <div id="comparison-results" class="comparison-results" style="display: none;">
+                <h4>Comparison Results</h4>
+                <div id="comparison-content"></div>
               </div>
               
               <div class="project-revisions-list" id="project-revisions">
@@ -828,6 +898,23 @@
               
               <div class="print-view-summary">
                 <div id="print-view-total"></div>
+              </div>
+              
+              <div class="print-view-options">
+                <div class="print-view-option">
+                  <label for="print-currency">Output Currency for PDF/Export:</label>
+                  <select id="print-currency">
+                    <option value="USD">USD (US Dollar)</option>
+                    <option value="EUR">EUR (Euro)</option>
+                    <option value="GBP">GBP (British Pound)</option>
+                    <option value="NOK">NOK (Norwegian Krone)</option>
+                    <option value="SEK">SEK (Swedish Krona)</option>
+                    <option value="DKK">DKK (Danish Krone)</option>
+                  </select>
+                  <div class="option-description">
+                    <i class="fa fa-exchange"></i> All prices will be converted from their original currencies to this selected currency using the exchange rates defined in Settings.
+                  </div>
+                </div>
               </div>
               
               <div class="print-view-footer">
@@ -902,9 +989,24 @@
               </div>
             </div>
             
-            <div class="form-group">
-              <label for="project-description">Description</label>
-              <textarea id="project-description" rows="3"></textarea>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="project-currency">Default Currency</label>
+                <select id="project-currency">
+                  <option value="USD">USD (US Dollar)</option>
+                  <option value="EUR">EUR (Euro)</option>
+                  <option value="GBP">GBP (British Pound)</option>
+                  <option value="NOK">NOK (Norwegian Krone)</option>
+                  <option value="SEK">SEK (Swedish Krona)</option>
+                  <option value="DKK">DKK (Danish Krone)</option>
+                </select>
+                <div class="input-hint">Used for project exports and PDF generation</div>
+              </div>
+            
+              <div class="form-group">
+                <label for="project-description">Description</label>
+                <textarea id="project-description" rows="3"></textarea>
+              </div>
             </div>
             
             <!-- Team Size and Budget fields removed -->

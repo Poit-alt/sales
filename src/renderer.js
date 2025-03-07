@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize file dropdown menu
   initializeFileMenu();
   
+  // Initialize dashboard stats with zeros until data is loaded
+  updateDashboardStatistics(0, 0, 0, 0);
+  
   // Add console log to debug tab navigation
   console.log('Tabs setup:', {
     sidebarLinks: document.querySelectorAll('.sidebar-nav a[data-tab]'),
@@ -350,6 +353,33 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
   
+  // Function to update the dashboard statistics
+  function updateDashboardStatistics(productsCount, categoriesCount, salesCount = 0, customersCount = 0) {
+    // Products count
+    const numProductsEl = document.getElementById('num-products');
+    if (numProductsEl) {
+      numProductsEl.textContent = productsCount || '-';
+    }
+    
+    // Categories count
+    const numCategoriesEl = document.getElementById('num-categories');
+    if (numCategoriesEl) {
+      numCategoriesEl.textContent = categoriesCount || '-';
+    }
+    
+    // Sales count
+    const numSalesEl = document.getElementById('num-sales');
+    if (numSalesEl) {
+      numSalesEl.textContent = salesCount || '-';
+    }
+    
+    // Customers count
+    const numCustomersEl = document.getElementById('num-customers');
+    if (numCustomersEl) {
+      numCustomersEl.textContent = customersCount || '-';
+    }
+  }
+
   // Load database summary and products
   async function loadDatabaseSummary(dbPath) {
     if (window.electron && window.electron.database) {
@@ -380,16 +410,8 @@ document.addEventListener('DOMContentLoaded', () => {
           else if (file.includes('customer')) customerFiles++;
         }
         
-        // Update the UI
-        const numProductsEl = document.getElementById('num-products');
-        const numCategoriesEl = document.getElementById('num-categories');
-        const numSalesEl = document.getElementById('num-sales');
-        const numCustomersEl = document.getElementById('num-customers');
-        
-        if (numProductsEl) numProductsEl.textContent = productFiles || '-';
-        if (numCategoriesEl) numCategoriesEl.textContent = categoryFiles || '-';
-        if (numSalesEl) numSalesEl.textContent = salesFiles || '-';
-        if (numCustomersEl) numCustomersEl.textContent = customerFiles || '-';
+        // Update the UI with counts from file system
+        updateDashboardStatistics(productFiles, categoryFiles, salesFiles, customerFiles);
         
         // Load products data (for the Products tab)
         await loadProducts(productFileNames);
@@ -444,6 +466,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           }
           
+          // Update summary statistics
+          updateDashboardStatistics(allProducts.length, categories.size);
+          
           // Update category filter and apply filters
           updateCategoryFilter();
           applyFilters();
@@ -494,6 +519,9 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             });
           }
+          
+          // Update summary statistics
+          updateDashboardStatistics(allProducts.length, categories.size);
           
           // Update category filter
           updateCategoryFilter();
@@ -573,6 +601,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
+      // Update summary statistics
+      updateDashboardStatistics(allProducts.length, categories.size);
+      
       // Update category filter
       updateCategoryFilter();
       
@@ -608,6 +639,9 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Update database path display
           displayDatabasePath(dbPath);
+          
+          // If we don't have counts yet, update with empty data until loading is complete
+          updateDashboardStatistics(allProducts.length, categories.size);
         }
       }
     });
@@ -6557,6 +6591,15 @@ function openEditProjectModal(project) {
     document.getElementById('project-deadline').value = project.deadline || '';
     document.getElementById('project-description').value = project.description || '';
     
+    // Set completion percentage
+    const completionSlider = document.getElementById('project-completion');
+    const completionValue = document.querySelector('.completion-value');
+    if (completionSlider && completionValue) {
+      const completion = project.completion || 0;
+      completionSlider.value = completion;
+      completionValue.textContent = `${completion}%`;
+    }
+    
     // Set currency if available, or default to USD
     const currencySelect = document.getElementById('project-currency');
     if (currencySelect) {
@@ -6603,6 +6646,16 @@ function initializeProjectForm() {
   const cancelProjectBtn = document.getElementById('cancel-project');
   const addTaskBtn = document.getElementById('add-task');
   const projectModalCloseBtn = document.querySelector('#project-modal .modal-close');
+  const completionSlider = document.getElementById('project-completion');
+  const completionValue = document.querySelector('.completion-value');
+  
+  // Initialize completion slider behavior
+  if (completionSlider && completionValue) {
+    // Update completion value display when slider changes
+    completionSlider.addEventListener('input', () => {
+      completionValue.textContent = `${completionSlider.value}%`;
+    });
+  }
   
   // Form submission
   if (projectForm) {
@@ -6617,6 +6670,7 @@ function initializeProjectForm() {
       const deadline = document.getElementById('project-deadline').value;
       const description = document.getElementById('project-description').value;
       const currency = document.getElementById('project-currency').value || 'USD';
+      const completion = parseInt(document.getElementById('project-completion').value, 10) || 0;
       
       // Get tasks
       const taskInputs = document.querySelectorAll('#tasks-container .task-input');
@@ -6657,6 +6711,7 @@ function initializeProjectForm() {
             currency,
             tasks,
             products,
+            completion: completion,
             updatedAt: new Date().toISOString(),
             updatedBy: getCurrentUserName()
           };
@@ -6682,7 +6737,7 @@ function initializeProjectForm() {
           currency,
           tasks,
           products,
-          completion: 0,
+          completion: completion,
           createdAt: new Date().toISOString(),
           createdBy: getCurrentUserName()
         };

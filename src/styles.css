@@ -2070,6 +2070,50 @@ tr:hover {
   color: var(--warning);
 }
 
+/* Completion slider styles */
+.completion-input-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.completion-slider {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+}
+
+.completion-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+.completion-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+.completion-value {
+  min-width: 40px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 /* Project form specific styles */
 .tasks-section {
   border: 1px solid var(--border);

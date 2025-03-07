@@ -13,14 +13,15 @@
       "budget": 5000,
       "createdAt": "2025-03-07T19:22:57.465Z",
       "createdBy": "Peter",
-      "status": "Active",
+      "status": "On Hold",
       "products": [
         {
           "productId": "PRD-004",
-          "quantity": 5
+          "quantity": 5,
+          "categoryId": "cat-m7zar4964v9m3"
         }
       ],
-      "updatedAt": "2025-03-07T20:45:21.191Z",
+      "updatedAt": "2025-03-07T23:58:22.535Z",
       "updatedBy": "Peter",
       "revisions": [
         {
@@ -28,8 +29,51 @@
           "description": "Modified project products. New total: 1 products.",
           "date": "2025-03-07T21:27:59.655Z",
           "author": "Peter"
+        },
+        {
+          "title": "Product Configuration Change",
+          "description": "Modified project products. New total: 1 products.",
+          "date": "2025-03-07T23:57:53.150Z",
+          "author": "Peter",
+          "productSnapshot": [
+            {
+              "productId": "PRD-004",
+              "name": "Point of Sale Terminal",
+              "price": 1400,
+              "currency": "NOK",
+              "quantity": 5,
+              "categoryId": "cat-m7zar4964v9m3"
+            }
+          ]
         }
-      ]
+      ],
+      "productCategories": [
+        {
+          "id": "hardware",
+          "name": "Hardware",
+          "order": 0,
+          "expanded": true
+        },
+        {
+          "id": "software",
+          "name": "Software",
+          "order": 1,
+          "expanded": true
+        },
+        {
+          "id": "services",
+          "name": "Services",
+          "order": 2,
+          "expanded": true
+        },
+        {
+          "id": "cat-m7zar4964v9m3",
+          "name": "Test",
+          "order": 3,
+          "expanded": true
+        }
+      ],
+      "currency": "USD"
     },
     {
       "id": "proj-m7z5xsmx5y31b",
@@ -147,7 +191,7 @@
           "categoryId": "software"
         }
       ],
-      "completion": 0,
+      "completion": 52,
       "createdAt": "2025-03-07T22:57:01.720Z",
       "createdBy": "Peter",
       "productCategories": [
@@ -298,12 +342,12 @@
         }
       ],
       "currency": "USD",
-      "updatedAt": "2025-03-07T23:39:09.204Z",
+      "updatedAt": "2025-03-07T23:57:33.550Z",
       "updatedBy": "Peter"
     }
   ],
   "meta": {
-    "updatedAt": "2025-03-07T23:39:09.205Z",
+    "updatedAt": "2025-03-07T23:58:22.537Z",
     "updatedBy": "Peter",
     "version": "1.0"
   }

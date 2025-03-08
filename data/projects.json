@@ -394,7 +394,8 @@
         {
           "productId": "PRD-004",
           "quantity": 1,
-          "categoryId": "software"
+          "categoryId": "software",
+          "isOption": false
         },
         {
           "productId": "BDL-002",
@@ -572,10 +573,25 @@
           ]
         }
       ]
+    },
+    {
+      "id": "proj-m80nhm6f4bjwv",
+      "title": "test",
+      "client": "resr",
+      "priority": "medium",
+      "status": "Active",
+      "deadline": "2025-04-08",
+      "description": "fsefe",
+      "currency": "NOK",
+      "tasks": [],
+      "products": [],
+      "completion": 31,
+      "createdAt": "2025-03-08T20:22:01.863Z",
+      "createdBy": "Peter"
     }
   ],
   "meta": {
-    "updatedAt": "2025-03-08T10:45:38.900Z",
+    "updatedAt": "2025-03-08T20:22:01.863Z",
     "updatedBy": "Peter",
     "version": "1.0"
   }

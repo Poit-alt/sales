@@ -3800,6 +3800,7 @@ function populateProjectDetailsModal(project) {
     const categoryCounts = {};
     const totalProducts = project.products.length;
     let validProducts = 0;
+    let optionalProducts = 0;
     
     // Get project currency for conversion
     const projectCurrency = project.currency || 'USD';
@@ -3808,6 +3809,12 @@ function populateProjectDetailsModal(project) {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
         validProducts++;
+        
+        // Skip optional products in the price total
+        if (product.isOption) {
+          optionalProducts++;
+          return;
+        }
         
         // Convert product price to project currency
         const sourceCurrency = productDetails.currency || 'USD';
@@ -3828,9 +3835,14 @@ function populateProjectDetailsModal(project) {
     });
     
     // Create summary text
+    let optionalText = '';
+    if (optionalProducts > 0) {
+      optionalText = ` (including ${optionalProducts} optional product${optionalProducts !== 1 ? 's' : ''})`;
+    }
+    
     productSummary.innerHTML = `
       <div class="product-summary-info">
-        <p>This project includes ${totalProducts} product${totalProducts !== 1 ? 's' : ''} 
+        <p>This project includes ${totalProducts} product${totalProducts !== 1 ? 's' : ''}${optionalText}
         with a total value of ${formatMoney(totalValue, projectCurrency)}.</p>
         
         <div class="product-summary-categories">
@@ -4061,7 +4073,7 @@ function exportProjectProductsToCSV(project) {
   }
   
   // CSV header
-  let csvContent = `Category,Product ID,Product Name,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency})\n`;
+  let csvContent = `Category,Product ID,Product Name,Type,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency})\n`;
   
   // Get all categories
   const categories = {};
@@ -4098,7 +4110,7 @@ function exportProjectProductsToCSV(project) {
       };
       
       // Add CSV row
-      csvContent += `${escapeCsv(categoryName)},${escapeCsv(productDetails.id)},${escapeCsv(productDetails.name)},${product.quantity},${unitPrice},${totalPriceFormatted}\n`;
+      csvContent += `${escapeCsv(categoryName)},${escapeCsv(productDetails.id)},${escapeCsv(productDetails.name)},${product.isOption ? 'Optional' : 'Required'},${product.quantity},${unitPrice},${totalPriceFormatted}\n`;
     }
   });
   
@@ -4499,8 +4511,12 @@ function generateProductPrintContent(project) {
   content += `<div id="print-view-categories">`;
   
   // Calculate total value for all products, with currency conversion
+  // Exclude optional products from total
   let totalValue = 0;
   (project.products || []).forEach(product => {
+    // Skip optional products in the total
+    if (product.isOption) return;
+    
     const productDetails = findProductById(product.productId);
     if (productDetails) {
       // Convert price to output currency
@@ -4527,8 +4543,12 @@ function generateProductPrintContent(project) {
       if (categoryProducts.length === 0) return;
       
       // Calculate category total with currency conversion
+      // Exclude optional products from total
       let categoryTotal = 0;
       categoryProducts.forEach(product => {
+        // Skip optional products in the total
+        if (product.isOption) return;
+        
         const productDetails = findProductById(product.productId);
         if (productDetails) {
           // Convert price to output currency
@@ -4574,11 +4594,14 @@ function generateProductPrintContent(project) {
           );
           const totalPrice = convertedUnitPrice * product.quantity;
           
+          // Check if this is an optional product
+          const rowClass = product.isOption ? 'optional-product' : '';
+          
           // Create the main product row
           content += `
-            <tr>
+            <tr class="${rowClass}">
               <td>${productDetails.id}</td>
-              <td>${productDetails.name}</td>
+              <td>${productDetails.name}${product.isOption ? ' <span style="color:#666;font-size:80%;font-style:italic">(Optional)</span>' : ''}</td>
               <td>${product.quantity}</td>
               <td>${formatPrice(convertedUnitPrice, outputCurrency)}</td>
               <td>${formatPrice(totalPrice, outputCurrency)}</td>
@@ -4841,7 +4864,7 @@ function generateProductPrintView(project) {
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${productDetails.id}</td>
-            <td>${productDetails.name}</td>
+            <td>${productDetails.name}${product.isOption ? ' <span style="color:#666;font-size:80%;font-style:italic">(Optional)</span>' : ''}</td>
             <td>${product.quantity}</td>
             <td>${formatPrice(productDetails.price, productDetails.currency)}</td>
             <td>${formatPrice(totalPrice, productDetails.currency)}</td>
@@ -5244,9 +5267,13 @@ function populateProductsTab(project) {
   let totalProducts = 0;
   
   // Calculate total value for all products in this project, converting to project currency
+  // Skip optional products in the total
   let totalValue = 0;
   const projectCurrency = project.currency || 'USD';
   (project.products || []).forEach(product => {
+    // Skip optional products in the total
+    if (product.isOption) return;
+    
     const productDetails = findProductById(product.productId);
     if (productDetails) {
       // Convert product price to project currency
@@ -5285,12 +5312,22 @@ function populateProductsTab(project) {
     categoryEl.className = 'project-product-category';
     categoryEl.dataset.categoryId = category.id;
     
-    // Filter products for this category
-    const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+    // Filter products for this category and store original index
+    const categoryProducts = [];
+    (project.products || []).forEach((p, idx) => {
+      if (p.categoryId === category.id) {
+        // Create a new object with the original index
+        categoryProducts.push({...p, _originalIndex: idx});
+      }
+    });
     
     // Calculate category total first, converting to project currency
+    // Skip optional products in the total
     let categoryTotal = 0;
     categoryProducts.forEach(product => {
+      // Skip optional products in the total
+      if (product.isOption) return;
+      
       const productDetails = findProductById(product.productId);
       if (productDetails) {
         // Convert product price to project currency
@@ -5407,7 +5444,13 @@ function populateProductsTab(project) {
   });
   
   // Handle any uncategorized products
-  const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
+  const uncategorizedProducts = [];
+  (project.products || []).forEach((p, idx) => {
+    if (!p.categoryId) {
+      // Create a new object with the original index
+      uncategorizedProducts.push({...p, _originalIndex: idx});
+    }
+  });
   
   // Update product count display
   const productCountDisplay = document.getElementById('product-count-display');
@@ -5421,8 +5464,12 @@ function populateProductsTab(project) {
     totalProducts += uncategorizedProducts.length;
     
     // Calculate uncategorized total, converting to project currency
+    // Skip optional products in the total
     let uncategorizedTotal = 0;
     uncategorizedProducts.forEach(product => {
+      // Skip optional products in the total
+      if (product.isOption) return;
+      
       const productDetails = findProductById(product.productId);
       if (productDetails) {
         // Convert product price to project currency
@@ -5514,6 +5561,9 @@ function createProductElement(product, index, projectCurrency) {
   // Create a container for the product
   const productItem = document.createElement('div');
   productItem.className = 'product-item';
+  if (product.isOption) {
+    productItem.classList.add('option');
+  }
   productItem.dataset.index = index;
   
   if (productDetails) {
@@ -5540,7 +5590,10 @@ function createProductElement(product, index, projectCurrency) {
         </div>
         <div class="product-actions">
           <div class="product-item-quantity">${product.quantity}x</div>
-          <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
+          <button class="btn-icon toggle-option" data-index="${product._originalIndex !== undefined ? product._originalIndex : index}" title="${product.isOption ? 'Mark as regular item' : 'Mark as optional'}">
+            <i class="fa ${product.isOption ? 'fa-check-square-o' : 'fa-square-o'}"></i>
+          </button>
+          <button class="btn-icon remove-product" data-index="${product._originalIndex !== undefined ? product._originalIndex : index}" title="Remove product">
             <i class="fa fa-trash"></i>
           </button>
         </div>`;
@@ -5558,7 +5611,10 @@ function createProductElement(product, index, projectCurrency) {
         </div>
         <div class="product-actions">
           <div class="product-item-quantity">${product.quantity}x</div>
-          <button class="btn-icon remove-product" data-index="${index}" title="Remove product">
+          <button class="btn-icon toggle-option" data-index="${product._originalIndex !== undefined ? product._originalIndex : index}" title="${product.isOption ? 'Mark as regular item' : 'Mark as optional'}">
+            <i class="fa ${product.isOption ? 'fa-check-square-o' : 'fa-square-o'}"></i>
+          </button>
+          <button class="btn-icon remove-product" data-index="${product._originalIndex !== undefined ? product._originalIndex : index}" title="Remove product">
             <i class="fa fa-trash"></i>
           </button>
         </div>`;
@@ -5570,6 +5626,16 @@ function createProductElement(product, index, projectCurrency) {
       removeButton.addEventListener('click', (e) => {
         e.stopPropagation();
         removeProductFromProject(index);
+      });
+    }
+    
+    // Add event listeners for the buttons
+    const toggleOptionButton = productItem.querySelector('.toggle-option');
+    if (toggleOptionButton) {
+      toggleOptionButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dataIndex = parseInt(toggleOptionButton.getAttribute('data-index'), 10);
+        toggleProductOptionStatus(dataIndex);
       });
     }
     
@@ -5850,6 +5916,13 @@ function showAddProductModal(project, categoryId = null) {
         </div>
         ` : ''}
         
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="product-is-option"> Mark as optional
+            <span class="optional-text">Optional products are shown as alternatives that can be included</span>
+          </label>
+        </div>
+        
         <div class="modal-actions">
           <button class="button" id="confirm-add-product">Add Product</button>
           <button class="button button-outline" id="cancel-add-product">Cancel</button>
@@ -5884,6 +5957,7 @@ function showAddProductModal(project, categoryId = null) {
   confirmBtn.addEventListener('click', () => {
     const productSelect = productInput.querySelector('.project-product-select');
     const quantityInput = productInput.querySelector('.project-product-quantity');
+    const isOptionalCheckbox = document.getElementById('product-is-option');
     
     if (productSelect && productSelect.value) {
       // Initialize products array if needed
@@ -5904,7 +5978,8 @@ function showAddProductModal(project, categoryId = null) {
       project.products.push({
         productId: productSelect.value,
         quantity: parseInt(quantityInput.value, 10) || 1,
-        categoryId: selectedCategoryId || undefined
+        categoryId: selectedCategoryId || undefined,
+        isOption: isOptionalCheckbox && isOptionalCheckbox.checked
       });
       
       // Update the projects tab
@@ -5947,6 +6022,44 @@ function removeProductFromProject(index) {
     
     // Notify the user
     showNotification('Product removed from project', 'info');
+  } else {
+    console.error('Invalid product index or no products array:', index, project);
+  }
+}
+
+// Toggle product option status
+function toggleProductOptionStatus(index) {
+  // Get current project from the modal
+  const detailsModal = document.getElementById('project-details-modal');
+  if (!detailsModal) {
+    showNotification('Project details not found', 'error');
+    return;
+  }
+  
+  const projectId = detailsModal.dataset.projectId;
+  const project = projects.find(p => p.id === projectId);
+  
+  if (!project) {
+    showNotification('Project data not found', 'error');
+    return;
+  }
+  
+  console.log('Toggle option status for index:', index, 'products length:', project.products?.length);
+  
+  if (project.products && index >= 0 && index < project.products.length) {
+    // Toggle the option status
+    project.products[index].isOption = !project.products[index].isOption;
+    console.log('Updated product at index', index, 'to isOption:', project.products[index].isOption);
+    
+    // Update the products tab
+    populateProductsTab(project);
+    
+    // Notify the user
+    if (project.products[index].isOption) {
+      showNotification('Product marked as optional', 'success');
+    } else {
+      showNotification('Product marked as regular item', 'success');
+    }
   } else {
     console.error('Invalid product index or no products array:', index, project);
   }

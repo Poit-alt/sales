@@ -2472,11 +2472,38 @@ tr:hover {
   margin-bottom: 0.75rem;
 }
 
+.product-item.option {
+  background-color: rgba(var(--bg-primary), 0.6);
+  border: 1px dashed var(--border);
+}
+
+.product-item.option::before {
+  content: "OPTIONAL";
+  position: absolute;
+  right: 14px;
+  top: 8px;
+  font-size: 0.7rem;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.product-item.option .product-item-name,
+.product-item.option .product-item-details,
+.product-item.option .product-item-price {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
 .product-item-header {
   flex: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
 }
 
 .product-item-name {
@@ -2839,6 +2866,13 @@ tr:hover {
 .print-product-table td {
   padding: 0.75rem;
   border-bottom: 1px solid #eee;
+}
+
+.print-product-table tr.optional-product td {
+  border-bottom: 1px dashed #bbb;
+  background-color: #fafafa;
+  font-style: italic;
+  color: #666;
 }
 
 .print-view-summary {

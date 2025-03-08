@@ -309,9 +309,67 @@ document.addEventListener('DOMContentLoaded', () => {
   async function checkDatabasePath() {
     console.log('Checking database path on startup...');
     
-    // Check for a previously saved database path in localStorage
+    // IMPORTANT: For debugging, show all localStorage items
+    console.log('All localStorage items:');
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      console.log(`  ${key} = ${localStorage.getItem(key)}`);
+    }
+    
+    // Listen for database path sync from main process
+    if (window.electron) {
+      window.electron.receiveFromMain('sync-database-path', (path) => {
+        console.log('Received database path sync from main process:', path);
+        if (path) {
+          localStorage.setItem('lastLoadedDatabasePath', path);
+          console.log('Updated localStorage with path from main process:', path);
+        }
+      });
+      
+      window.electron.receiveFromMain('sync-projects-database-path', (path) => {
+        console.log('Received projects database path sync from main process:', path);
+        if (path) {
+          localStorage.setItem('projectsDatabasePath', path);
+          console.log('Updated localStorage with projects path from main process:', path);
+        }
+      });
+      
+      window.electron.receiveFromMain('selected-path', (path) => {
+        console.log('Received selected path from main process:', path);
+        if (path) {
+          localStorage.setItem('lastLoadedDatabasePath', path);
+          console.log('Updated localStorage with selected path:', path);
+        }
+      });
+    }
+    
+    // Get the saved path from localStorage and get app settings for comparison
     const lastLoadedPath = localStorage.getItem('lastLoadedDatabasePath');
+    console.log('====== STARTUP PATH CHECK ======');
     console.log('Last loaded database path from localStorage:', lastLoadedPath);
+    
+    if (window.electron && window.electron.database) {
+      // Get app settings for debugging
+      try {
+        const appSettings = await window.electron.database.getAppSettings();
+        console.log('App settings at startup:', appSettings);
+        
+        // If localStorage doesn't have a path but app settings does, use that
+        if (!lastLoadedPath && appSettings.settings && appSettings.settings.databasePath) {
+          const mainProcessPath = appSettings.settings.databasePath;
+          console.log('No localStorage path but found path in settings:', mainProcessPath);
+          localStorage.setItem('lastLoadedDatabasePath', mainProcessPath);
+          // Continue with this path below
+        }
+      } catch (err) {
+        console.error('Error getting app settings:', err);
+      }
+    }
+    
+    // Re-read the value in case it was updated above
+    const finalPath = localStorage.getItem('lastLoadedDatabasePath');
+    console.log('Final path to use:', finalPath);
+    console.log('====== END PATH CHECK ======');
     
     // IMPORTANT: Clear all products at startup
     window.allProducts = [];
@@ -319,24 +377,36 @@ document.addEventListener('DOMContentLoaded', () => {
     categories.clear();
     
     if (window.electron && window.electron.database) {
-      // First, check for a data directory in the app's path
-      const appDataPath = '/Users/peternordal/Documents/GitHub/sales/data';
-      console.log('App data directory path:', appDataPath);
-      
-      // If we have a previously loaded path from localStorage, use ONLY that
-      if (lastLoadedPath) {
-        console.log('Using database path from localStorage:', lastLoadedPath);
-        displayDatabasePath(lastLoadedPath);
+      // If we have a previously loaded path from localStorage, use that
+      if (finalPath) {
+        console.log('Using database path from localStorage:', finalPath);
+        displayDatabasePath(finalPath);
         
         // If the path is the local data directory, use loadProducts()
-        if (lastLoadedPath === 'Local data directory') {
+        if (finalPath === 'Local data directory') {
           console.log('Loading from local data directory based on localStorage setting');
           await loadProducts();
         } else {
-          console.log('Loading from custom directory based on localStorage setting:', lastLoadedPath);
+          console.log('Loading from custom directory based on localStorage setting:', finalPath);
+          console.log('Sending custom path to main process:', finalPath);
           // Force setting the database path in main process
-          await window.electron.database.selectPath(lastLoadedPath);
-          loadDatabaseSummary(lastLoadedPath);
+          const response = await window.electron.database.selectPath(finalPath);
+          console.log('Response from selectPath:', response);
+          
+          // Check if response indicates an error
+          if (response && response.error) {
+            console.error('Error selecting database path:', response.error);
+            showNotification(`Error: ${response.error}. Reverting to default database.`, 'error');
+            
+            // Reset to local data directory
+            displayDatabasePath('Local data directory');
+            localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
+            await loadProducts(); 
+          } else {
+            // Path was set successfully
+            showNotification(`Database path loaded: ${finalPath}`, 'success');
+            loadDatabaseSummary(finalPath);
+          }
         }
       } 
       // Otherwise check if there's a path in main process
@@ -344,11 +414,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const dbPath = await window.electron.database.getPath();
         if (dbPath) {
           console.log('Database path is set in main process:', dbPath);
+          // Make sure to update localStorage with the path from main process
+          localStorage.setItem('lastLoadedDatabasePath', dbPath);
           displayDatabasePath(dbPath);
           loadDatabaseSummary(dbPath);
         } else {
           console.log('No database path set anywhere, defaulting to local directory');
           displayDatabasePath('Local data directory');
+          localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
           await loadProducts(); // Load from local data directory as fallback
         }
       }
@@ -367,8 +440,50 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="db-path-display">
         <div class="path">${path}</div>
         <div class="status connected">Connected</div>
+        <button id="show-settings-btn" title="Show App Settings" style="margin-left: 10px;">
+          <i class="fa fa-info-circle"></i>
+        </button>
+        <button id="reset-settings-btn" title="Reset Settings File" style="margin-left: 5px;">
+          <i class="fa fa-exclamation-triangle"></i>
+        </button>
       </div>
     `;
+    
+    // Add click handler to settings button
+    const showSettingsBtn = document.getElementById('show-settings-btn');
+    if (showSettingsBtn) {
+      showSettingsBtn.addEventListener('click', showAppSettings);
+    }
+    
+    // Add click handler to reset settings button
+    const resetSettingsBtn = document.getElementById('reset-settings-btn');
+    if (resetSettingsBtn) {
+      resetSettingsBtn.addEventListener('click', async () => {
+        if (confirm('⚠️ WARNING: This will reset all app settings to default values. Continue?')) {
+          try {
+            const result = await window.electron.database.resetAppSettings();
+            console.log('Reset settings result:', result);
+            
+            if (result.success) {
+              alert(`Settings reset successful:\n${JSON.stringify(result.settings, null, 2)}`);
+              
+              // Clear localStorage and reload app
+              localStorage.clear();
+              localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
+              
+              if (confirm('Settings have been reset. Reload the app now?')) {
+                location.reload();
+              }
+            } else {
+              alert('Error resetting settings: ' + (result.error || 'Unknown error'));
+            }
+          } catch (err) {
+            console.error('Error resetting app settings:', err);
+            alert('Error resetting settings: ' + err.message);
+          }
+        }
+      });
+    }
   }
   
   // Display when no database path is set
@@ -381,6 +496,37 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="status disconnected">Not Connected</div>
       </div>
     `;
+  }
+  
+  // Show app settings for debugging
+  async function showAppSettings() {
+    if (window.electron && window.electron.database) {
+      try {
+        const result = await window.electron.database.getAppSettings();
+        console.log('App settings:', result);
+        
+        // Create a readable string
+        let settingsInfo = '';
+        if (result.error) {
+          settingsInfo = `Error getting settings: ${result.error}`;
+        } else {
+          settingsInfo = `
+Settings Path: ${result.settingsPath}
+Current App Database Path: ${result.appDatabasePath}
+localStorage Path: ${localStorage.getItem('lastLoadedDatabasePath')}
+
+Settings Content:
+${JSON.stringify(result.settings, null, 2)}
+          `;
+        }
+        
+        // Show in alert for now (could be improved with a modal)
+        alert(settingsInfo);
+      } catch (err) {
+        console.error('Error getting app settings:', err);
+        alert('Error getting app settings: ' + err.message);
+      }
+    }
   }
   
   // Function to update the dashboard statistics
@@ -492,27 +638,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset statistics to zero
     updateDashboardStatistics(0, 0, 0, 0);
     
-    // Get hardcoded path from meta tag
-    const storagePath = document.querySelector('meta[name="storage-path"]');
-    const hardcodedPath = storagePath ? storagePath.getAttribute('content') : null;
-    console.log('Hardcoded storage path from HTML:', hardcodedPath);
-    
-    // Try to load products.json from the data directory (always try the app data directory first)
+    // Load from selected database path (stored in main process)
     if (window.electron && window.electron.database) {
       try {
-        console.log('Attempting to load products.json from app data directory');
-        console.log('OVERRIDE: Using hardcoded path for maximum reliability');
+        console.log('Attempting to load products.json from selected database path');
         const result = await window.electron.database.readFile('products.json');
         
         if (result && !result.error && result.data && result.data.products) {
-          console.log('Successfully loaded products from app data directory:', result.data.products.length, 'products');
+          console.log('Successfully loaded products from database:', result.data.products.length, 'products');
           console.log('Product IDs in loaded data:', result.data.products.map(p => p.id).join(', '));
           
           // Set products directly from the result (we already cleared existing ones above)
           window.allProducts = result.data.products;
           
-          // Store the data directory location in localStorage
-          localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
+          // If the result includes a path, store it in localStorage
+          if (result.path) {
+            console.log('Storing path from result in localStorage:', result.path);
+            localStorage.setItem('lastLoadedDatabasePath', result.path);
+          } else {
+            // Otherwise store as default local directory
+            localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
+          }
           
           // Extract categories
           window.allProducts.forEach(product => {
@@ -684,6 +830,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
+  // Add a function to create reset button
+  function addResetPathButton() {
+    const container = document.getElementById('db-path-container');
+    if (!container) return;
+    
+    // Check if reset button already exists
+    if (document.getElementById('reset-db-path')) return;
+    
+    const resetDbBtn = document.createElement('button');
+    resetDbBtn.id = 'reset-db-path';
+    resetDbBtn.className = 'btn-small';
+    resetDbBtn.innerHTML = '<i class="fa fa-refresh"></i> Reset Path';
+    resetDbBtn.title = 'Reset to default database path';
+    resetDbBtn.style.marginLeft = '10px';
+    
+    // Add the button to the container
+    container.appendChild(resetDbBtn);
+    
+    // Add event listener to reset button
+    resetDbBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to reset the database path to the default directory?')) {
+        console.log('Resetting database path to default');
+        
+        // Clear localStorage
+        localStorage.removeItem('lastLoadedDatabasePath');
+        
+        // Use default path
+        const defaultPath = 'Local data directory';
+        
+        // Update UI
+        displayDatabasePath(defaultPath);
+        
+        // Clear products
+        window.allProducts = [];
+        window.filteredProducts = [];
+        categories.clear();
+        
+        // Force UI refresh with empty product set
+        if (productsTableBody) {
+          productsTableBody.innerHTML = '<tr><td colspan="7">Switching to default database...</td></tr>';
+        }
+        
+        // Show notification
+        showNotification('Database path reset to default', 'info');
+        
+        // Load from default path
+        await loadProducts();
+      }
+    });
+  }
+  
+  // Call the function to add the reset button
+  setTimeout(() => {
+    addResetPathButton();
+  }, 1000);
+
   // Handle database path selection
   if (selectDbPathBtn) {
     selectDbPathBtn.addEventListener('click', async () => {
@@ -692,6 +894,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const dbPath = await window.electron.database.selectPath();
         
         if (dbPath) {
+          // Check if it's an error response
+          if (dbPath.error) {
+            console.error('Error selecting path:', dbPath.error);
+            showNotification('Error: ' + dbPath.error, 'error');
+            return;
+          }
+          
           // FORCE CLEAR: Delete all products completely before changing databases
           console.log('FORCE CLEARING all products before database switch');
           window.allProducts = [];
@@ -703,11 +912,24 @@ document.addEventListener('DOMContentLoaded', () => {
             productsTableBody.innerHTML = '<tr><td colspan="7">Switching databases...</td></tr>';
           }
           
-          // Store selected path in localStorage for future reference
-          localStorage.setItem('lastLoadedDatabasePath', dbPath);
+          // Store selected path in localStorage for future reference (handle string vs object)
+          const pathToSave = typeof dbPath === 'string' ? dbPath : dbPath.toString();
+          console.log('Setting lastLoadedDatabasePath in localStorage to:', pathToSave);
+          
+          // FORCE RESET LOCALSTORAGE for troubleshooting
+          console.log('IMPORTANT: Previous localStorage value:', localStorage.getItem('lastLoadedDatabasePath'));
+          localStorage.clear(); // Clear all localStorage values
+          localStorage.setItem('lastLoadedDatabasePath', pathToSave);
+          
+          // Double-check it was saved correctly
+          const savedPath = localStorage.getItem('lastLoadedDatabasePath');
+          console.log('VERIFICATION: localStorage value after save:', savedPath);
+          
+          // Show confirmation for debugging
+          alert(`Database path set to: ${pathToSave}\nStored in localStorage: ${savedPath}`);
           
           // Display the new path
-          displayDatabasePath(dbPath);
+          displayDatabasePath(pathToSave);
           
           // Create the container if it doesn't exist
           let dbPathContainer = document.getElementById('db-path-container');
@@ -721,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           // Update database path display
-          displayDatabasePath(dbPath);
+          displayDatabasePath(pathToSave);
           
           // Reset statistics to zero to show loading state
           updateDashboardStatistics(0, 0, 0, 0);
@@ -729,7 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Now load from the new database
           setTimeout(() => {
             // Load with a slight delay to ensure clearing happens first
-            loadDatabaseSummary(dbPath);
+            loadDatabaseSummary(pathToSave);
           }, 100);
         }
       }
@@ -3023,10 +3245,27 @@ async function checkProjectsDatabasePath() {
     const appDataPath = '/Users/peternordal/Documents/GitHub/sales/data';
     console.log('Checking for app data directory for projects at:', appDataPath);
     
-    // Get saved projects database path
-    const dbPath = localStorage.getItem('projectsDatabasePath');
+    // Get saved projects database path from localStorage first as fallback
+    let dbPath = localStorage.getItem('projectsDatabasePath');
     
-    // If custom database path is set, use that first
+    try {
+      // Try to get the projects database path directly from main process
+      const mainProcessPath = await window.electron.database.getPath(true); // true = get projects path
+      console.log('Getting projects database path from main process:', mainProcessPath);
+      
+      // If main process has a projects database path, use that (it's more reliable)
+      if (mainProcessPath) {
+        console.log('Found projects database path in main process:', mainProcessPath);
+        // Update localStorage with the path from main process
+        dbPath = mainProcessPath;
+        localStorage.setItem('projectsDatabasePath', dbPath);
+      }
+    } catch (err) {
+      console.error('Error getting projects database path from main process:', err);
+      console.log('Falling back to localStorage path:', dbPath);
+    }
+    
+    // If we now have a database path (from either source), use it
     if (dbPath) {
       console.log('Projects database path is set to:', dbPath);
       displayProjectsDatabasePath(dbPath);
@@ -3130,19 +3369,9 @@ async function saveProjectsToDatabase() {
       // IMPORTANT: The correct method is saveFile, not writeFile
       console.log('Calling saveFile method with projects.json');
       
-      // Send the path along with the data if needed
-      let saveParams = {
-        fileName: 'projects.json',
-        data: projectsData
-      };
-      
-      // Add path if we have one
-      if (dbPath) {
-        saveParams.path = dbPath;
-      }
-      
-      // Save the file using the proper API method
-      const result = await window.electron.database.saveFile('projects.json', projectsData);
+      // Save the file using the proper API method with path parameter
+      // The third parameter is for customPath - this will be used instead of the default path
+      const result = await window.electron.database.saveFile('projects.json', projectsData, dbPath);
       
       // Check result
       if (result && result.error) {
@@ -3165,7 +3394,7 @@ async function saveProjectsToDatabase() {
         
         // Create data to send
         const saveData = {
-          type: 'projects',
+          type: 'projects-database', // Mark this as project-specific
           fileName: 'projects.json',
           data: {
             projects: projects,
@@ -3175,7 +3404,8 @@ async function saveProjectsToDatabase() {
               version: '1.0'
             }
           },
-          path: dbPath
+          // Use customPath instead of path for consistency
+          customPath: dbPath
         };
         
         // Send via IPC channel - 'saveData' is in the whitelist in preload.js
@@ -3304,12 +3534,12 @@ function initializeProjectDatabase() {
             }
           });
           
-          // Call selectPath directly
-          const result = await window.electron.database.selectPath();
+          // Call selectPath directly, indicating this is for projects
+          const result = await window.electron.database.selectPath(null, true); // Pass true to indicate it's for projects
           
           // Handle direct result if available
           if (result) {
-            console.log('Direct result from selectPath:', result);
+            console.log('Direct result from selectPath (projects):', result);
             
             // Extract path from result (different formats are possible)
             let dbPath = null;
@@ -3342,8 +3572,16 @@ function initializeProjectDatabase() {
 function handleNewDatabasePath(dbPath) {
   console.log('User selected database path:', dbPath);
   
-  // Save selected path
+  // Save selected path to localStorage
   localStorage.setItem('projectsDatabasePath', dbPath);
+  
+  // Also save to main process settings for persistence
+  if (window.electron && window.electron.sendToMain) {
+    window.electron.sendToMain('saveData', {
+      type: 'projects-database-path',
+      path: dbPath
+    });
+  }
   
   // Update display
   displayProjectsDatabasePath(dbPath);
@@ -3370,14 +3608,14 @@ async function loadProjectsFromDatabase(dbPath) {
     // Since we can't pass the path to readFile directly, we need to first
     // set the path in the main process context, then read the file
     
-    // Send path data to the main process
+    // Send path data to the main process - using the projects-specific type
     window.electron.sendToMain('saveData', {
-      type: 'database-path',
+      type: 'projects-database-path',
       path: dbPath
     });
     
     // Now try to read the file (main process should use the path we just sent)
-    const checkResult = await window.electron.database.readFile('projects.json');
+    const checkResult = await window.electron.database.readFile('projects.json', dbPath);
     
     // Check if we got a valid result
     if (!checkResult || checkResult.error || !checkResult.data) {

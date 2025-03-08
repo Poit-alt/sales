@@ -4208,6 +4208,11 @@ function openPrintWindow(project) {
               border-bottom: 1px solid #ddd;
               padding: 3pt 4pt;
             }
+            .print-product-table tr.bundle-subitem td {
+              border-bottom: 1px dotted #ddd;
+              background-color: #f9f9f9;
+              font-size: 90%;
+            }
             .print-view-summary {
               border-top: 1px solid #333;
               padding-top: 5pt;
@@ -4349,6 +4354,11 @@ function openPrintWindowFallback(project) {
         .print-product-table td {
           border-bottom: 1px solid #ddd;
           padding: 3pt 4pt;
+        }
+        .print-product-table tr.bundle-subitem td {
+          border-bottom: 1px dotted #ddd;
+          background-color: #f9f9f9;
+          font-size: 90%;
         }
         .print-view-summary {
           border-top: 1px solid #333;
@@ -4564,6 +4574,7 @@ function generateProductPrintContent(project) {
           );
           const totalPrice = convertedUnitPrice * product.quantity;
           
+          // Create the main product row
           content += `
             <tr>
               <td>${productDetails.id}</td>
@@ -4573,6 +4584,31 @@ function generateProductPrintContent(project) {
               <td>${formatPrice(totalPrice, outputCurrency)}</td>
             </tr>
           `;
+          
+          // If this is a bundle, add the bundled items as subitems with indentation
+          if (productDetails.isBundle && productDetails.bundleItems && productDetails.bundleItems.length > 0) {
+            productDetails.bundleItems.forEach(bundleItem => {
+              const bundledProduct = findProductById(bundleItem.productId);
+              if (bundledProduct) {
+                // Convert price of bundled item to output currency
+                const bundledItemUnitPrice = convertCurrency(
+                  bundledProduct.price,
+                  bundledProduct.currency || 'USD',
+                  outputCurrency
+                );
+                
+                // Add bundle item row - with price shown as note only
+                content += `
+                  <tr class="bundle-subitem">
+                    <td></td>
+                    <td style="padding-left: 20px;">↳ ${bundledProduct.name}</td>
+                    <td>${bundleItem.quantity * product.quantity}</td>
+                    <td colspan="2" style="font-style: italic; color: #666;">Note: ${formatPrice(bundledItemUnitPrice, outputCurrency)} each</td>
+                  </tr>
+                `;
+              }
+            });
+          }
         }
       });
       
@@ -4635,6 +4671,7 @@ function generateProductPrintContent(project) {
         );
         const totalPrice = convertedUnitPrice * product.quantity;
         
+        // Create the main product row
         content += `
           <tr>
             <td>${productDetails.id}</td>
@@ -4644,6 +4681,31 @@ function generateProductPrintContent(project) {
             <td>${formatPrice(totalPrice, outputCurrency)}</td>
           </tr>
         `;
+        
+        // If this is a bundle, add the bundled items as subitems with indentation
+        if (productDetails.isBundle && productDetails.bundleItems && productDetails.bundleItems.length > 0) {
+          productDetails.bundleItems.forEach(bundleItem => {
+            const bundledProduct = findProductById(bundleItem.productId);
+            if (bundledProduct) {
+              // Convert price of bundled item to output currency
+              const bundledItemUnitPrice = convertCurrency(
+                bundledProduct.price,
+                bundledProduct.currency || 'USD',
+                outputCurrency
+              );
+              
+              // Add bundle item row - with price shown as note only
+              content += `
+                <tr class="bundle-subitem">
+                  <td></td>
+                  <td style="padding-left: 20px;">↳ ${bundledProduct.name}</td>
+                  <td>${bundleItem.quantity * product.quantity}</td>
+                  <td colspan="2" style="font-style: italic; color: #666;">Note: ${formatPrice(bundledItemUnitPrice, outputCurrency)} each</td>
+                </tr>
+              `;
+            }
+          });
+        }
       }
     });
     

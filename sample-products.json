@@ -381,7 +381,7 @@
       "description": "Modern POS system with hardware and software components",
       "category": "Business Management",
       "subCategory": "Point of Sale",
-      "price": 1400,
+      "price": 1500,
       "currency": "NOK",
       "subscriptionType": "Annual",
       "vatRate": 25,
@@ -453,6 +453,12 @@
           "price": 1400,
           "currency": "USD",
           "changedBy": "Anonymous"
+        },
+        {
+          "date": "2025-03-08T10:42:50.119Z",
+          "price": 1500,
+          "currency": "NOK",
+          "changedBy": "Peter"
         }
       ],
       "isBundle": false

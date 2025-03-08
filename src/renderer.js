@@ -313,46 +313,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const lastLoadedPath = localStorage.getItem('lastLoadedDatabasePath');
     console.log('Last loaded database path from localStorage:', lastLoadedPath);
     
+    // IMPORTANT: Clear all products at startup
+    window.allProducts = [];
+    window.filteredProducts = [];
+    categories.clear();
+    
     if (window.electron && window.electron.database) {
       // First, check for a data directory in the app's path
       const appDataPath = '/Users/peternordal/Documents/GitHub/sales/data';
-      console.log('Checking for app data directory at:', appDataPath);
+      console.log('App data directory path:', appDataPath);
       
-      // Always check for local data directory first
-      if (window.electron.database) {
-        console.log('Always try to load from local data directory first');
-        
-        // Only use the local data directory as default
-        // if we don't have a previously saved path
-        if (!lastLoadedPath) {
-          displayDatabasePath('Local data directory');
-          await loadProducts(); // Try to load from local data directory
-        }
-      }
-      
-      // Check for user-selected database path
-      const dbPath = await window.electron.database.getPath();
-      
-      // If we have a previously loaded path from localStorage, use that
+      // If we have a previously loaded path from localStorage, use ONLY that
       if (lastLoadedPath) {
         console.log('Using database path from localStorage:', lastLoadedPath);
         displayDatabasePath(lastLoadedPath);
         
         // If the path is the local data directory, use loadProducts()
         if (lastLoadedPath === 'Local data directory') {
+          console.log('Loading from local data directory based on localStorage setting');
           await loadProducts();
         } else {
+          console.log('Loading from custom directory based on localStorage setting:', lastLoadedPath);
+          // Force setting the database path in main process
+          await window.electron.database.selectPath(lastLoadedPath);
           loadDatabaseSummary(lastLoadedPath);
         }
       } 
-      // Otherwise use the path from the main process if available
-      else if (dbPath) {
-        console.log('Database path is set to:', dbPath);
-        displayDatabasePath(dbPath);
-        loadDatabaseSummary(dbPath);
-      } else {
-        console.log('No database path set, using local directory');
-        displayNoDatabasePath();
+      // Otherwise check if there's a path in main process
+      else {
+        const dbPath = await window.electron.database.getPath();
+        if (dbPath) {
+          console.log('Database path is set in main process:', dbPath);
+          displayDatabasePath(dbPath);
+          loadDatabaseSummary(dbPath);
+        } else {
+          console.log('No database path set anywhere, defaulting to local directory');
+          displayDatabasePath('Local data directory');
+          await loadProducts(); // Load from local data directory as fallback
+        }
       }
     } else {
       // If running without Electron, load from local products.json

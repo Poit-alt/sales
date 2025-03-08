@@ -322,7 +322,22 @@ function setupIPC() {
   });
   
   // Database path handlers
-  ipcMain.handle('select-database-path', async () => {
+  ipcMain.handle('select-database-path', async (event, customPath) => {
+    // If a custom path is provided, use it directly (this is for restoring from localStorage)
+    if (customPath) {
+      console.log('Using provided custom path:', customPath);
+      app.databasePath = customPath;
+      
+      // Save it to settings
+      saveSettings({ databasePath: customPath });
+      
+      // Broadcast the selected path to all renderers
+      mainWindow.webContents.send('selected-path', customPath);
+      
+      return customPath;
+    }
+    
+    // Otherwise show a dialog to select
     const { canceled, filePaths } = await dialog.showOpenDialog({
       properties: ['openDirectory'],
       title: 'Select Database Directory',
@@ -339,6 +354,9 @@ function setupIPC() {
     
     // Save the path to user preferences
     saveSettings({ databasePath: dbPath });
+    
+    // Broadcast the selected path to all renderers
+    mainWindow.webContents.send('selected-path', dbPath);
     
     return dbPath;
   });
@@ -397,10 +415,30 @@ function setupIPC() {
   ipcMain.handle('read-database-file', async (event, fileName) => {
     console.log(`Reading database file: ${fileName}`);
     
-    // Always check the data directory for products.json first, regardless of other settings
+    // Check if we have a user-selected path first
+    if (app.databasePath && app.databasePath !== path.join(__dirname, '..', 'data')) {
+      try {
+        const userPath = path.join(app.databasePath, fileName);
+        console.log(`Checking for ${fileName} in user-selected directory first: ${userPath}`);
+        
+        if (fs.existsSync(userPath)) {
+          const data = await fs.promises.readFile(userPath, 'utf8');
+          const stats = fs.statSync(userPath);
+          console.log(`Successfully read ${fileName} from user-selected path: ${userPath}`);
+          console.log(`File size: ${stats.size} bytes, Last modified: ${stats.mtime}`);
+          return { data: JSON.parse(data) };
+        } else {
+          console.log(`${fileName} not found in user-selected path. Will try default location.`);
+        }
+      } catch (err) {
+        console.error(`Error reading ${fileName} from user-selected path:`, err);
+      }
+    }
+    
+    // Fallback: check the app data directory if user path failed or wasn't set
     try {
       const dataPath = path.join(__dirname, '..', 'data', fileName);
-      console.log(`First checking for ${fileName} in app data directory: ${dataPath}`);
+      console.log(`Checking for ${fileName} in app data directory: ${dataPath}`);
       
       if (fs.existsSync(dataPath)) {
         const data = await fs.promises.readFile(dataPath, 'utf8');
@@ -415,55 +453,35 @@ function setupIPC() {
       console.error(`Error reading ${fileName} from app data directory:`, err);
     }
   
+    // We've already checked both user-selected path and app data directory
+    // If we reach here, the file was not found in either location
+    
+    // Load settings as a last resort
     if (!app.databasePath) {
       const settings = loadSettings();
       if (settings && settings.databasePath) {
         app.databasePath = settings.databasePath;
         console.log(`Set app.databasePath from settings: ${app.databasePath}`);
-      } else {
-        console.log('No database path in settings, trying local data directory as a last resort');
         
-        // Try local data directory as a last resort
+        // Try the path from settings
         try {
-          const dataPath = path.join(__dirname, '..', 'data', 'products.json');
-          if (fs.existsSync(dataPath)) {
-            const data = await fs.promises.readFile(dataPath, 'utf8');
-            console.log(`Successfully read products.json from fallback path: ${dataPath}`);
+          const filePath = path.join(app.databasePath, fileName);
+          console.log(`Trying path from settings: ${filePath}`);
+          
+          if (fs.existsSync(filePath)) {
+            const data = await fs.promises.readFile(filePath, 'utf8');
+            console.log(`Successfully read ${fileName} from settings path: ${filePath}`);
             return { data: JSON.parse(data) };
           }
         } catch (err) {
-          console.error('Error reading from fallback path:', err);
+          console.error(`Error reading from settings path:`, err);
         }
-        
-        return { error: 'No database path set' };
       }
     }
     
-    try {
-      const filePath = path.join(app.databasePath, fileName);
-      console.log(`Reading file from database path: ${filePath}`);
-      
-      if (fs.existsSync(filePath)) {
-        const data = await fs.promises.readFile(filePath, 'utf8');
-        console.log(`Successfully read ${fileName} from: ${filePath}`);
-        return { data: JSON.parse(data) };
-      } else {
-        // If file doesn't exist in database path, try app data directory
-        const dataPath = path.join(__dirname, '..', 'data', fileName);
-        console.log(`File not found at database path, trying app data directory: ${dataPath}`);
-        
-        if (fs.existsSync(dataPath)) {
-          const data = await fs.promises.readFile(dataPath, 'utf8');
-          console.log(`Successfully read ${fileName} from app data directory: ${dataPath}`);
-          return { data: JSON.parse(data) };
-        } else {
-          return { error: `File ${fileName} not found in database or app data directory` };
-        }
-      }
-    } catch (err) {
-      console.error(`Error reading file ${fileName}:`, err);
-      return { error: err.message };
-    }
+    // If we've tried everything and still no success, return an error
+    console.error(`File ${fileName} not found in any location`);
+    return { error: `File ${fileName} not found in any location` };
   });
   
   // Handler to save data to a file

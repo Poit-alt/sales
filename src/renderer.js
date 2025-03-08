@@ -1986,18 +1986,17 @@ document.addEventListener('DOMContentLoaded', () => {
               productsData.products.push(updatedProduct);
             }
             
-            // Use the direct IPC send approach which is already working
-            console.log('Saving product data via IPC...');
+            // Use the save-database-file approach for proper path handling
+            console.log('Saving product data via save-database-file...');
             
-            // Set up one-time listener for the save result
-            const onSaveResult = (result) => {
-              // Remove the listener to avoid multiple callbacks
-              window.electron.receiveFromMain('save-products-result', onSaveResult);
+            try {
+              // Use window.electron.database.saveFile which respects the selected database path
+              const saveResult = await window.electron.database.saveFile('products.json', productsData);
               
-              if (result.success) {
-                console.log('Product saved successfully to:', result.path);
+              if (saveResult && !saveResult.error) {
+                console.log('Product saved successfully with saveFile');
                 // Show a success message with the save path
-                const savedPath = result.path || 'selected database';
+                const savedPath = saveResult.path || 'selected database';
                 
                 // Update the global products array to ensure changes persist in memory
                 const updatedProductInGlobal = allProducts.findIndex(p => p.id === updatedProduct.id);
@@ -2008,16 +2007,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 alert(`Product updated and saved successfully to: ${savedPath}`);
               } else {
-                console.error('Failed to save via IPC:', result.error);
-                alert('Warning: Product was updated in memory but failed to save to file: ' + result.error);
+                console.error('Failed to save via saveFile:', saveResult ? saveResult.error : 'Unknown error');
+                alert('Warning: Product was updated in memory but failed to save to file: ' + (saveResult ? saveResult.error : 'Unknown error'));
               }
-            };
-            
-            // Register the event listener
-            window.electron.receiveFromMain('save-products-result', onSaveResult);
-            
-            // Send the products data to the main process
-            window.electron.sendToMain('save-products', productsData);
+            } catch (saveError) {
+              console.error('Exception saving via saveFile:', saveError);
+              alert('Warning: Product was updated in memory but failed to save to file: ' + saveError.message);
+            }
           }
         } catch (err) {
           console.error('Error saving product:', err);

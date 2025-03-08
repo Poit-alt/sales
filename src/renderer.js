@@ -1,21 +1,28 @@
 // This file contains the code that runs in the renderer process
 
-// Global product data array
-let allProducts = [];
+// Global product data arrays - made globally accessible with window
+window.allProducts = [];
+window.filteredProducts = [];
 
 // Find a product by its ID (global function)
 function findProductById(productId) {
   // Check if we have product data
-  if (typeof allProducts === 'undefined' || !allProducts || !Array.isArray(allProducts)) {
+  if (typeof window.allProducts === 'undefined' || !window.allProducts || !Array.isArray(window.allProducts)) {
     console.error('Product data not available');
     return null;
   }
   
-  return allProducts.find(product => product && product.id === productId);
+  return window.allProducts.find(product => product && product.id === productId);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded');
+  
+  // Ensure window.allProducts exists and is empty on startup
+  if (typeof window.allProducts === 'undefined') {
+    console.log('Initializing empty global products array');
+    window.allProducts = [];
+  }
   
   // Initialize product categories in settings
   initializeProductCategoriesSettings();
@@ -287,10 +294,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const pageInfo = document.getElementById('page-info');
   
   // Initialize the products state if needed
-  if (typeof allProducts === 'undefined') {
-    allProducts = [];
+  if (typeof window.allProducts === 'undefined') {
+    window.allProducts = [];
   }
-  let filteredProducts = [];
+  if (typeof window.filteredProducts === 'undefined') {
+    window.filteredProducts = [];
+  }
+  let filteredProducts = window.filteredProducts; // Point to the global variable
   let categories = new Set();
   let currentPage = 1;
   const itemsPerPage = 10;
@@ -298,6 +308,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if database path is already set
   async function checkDatabasePath() {
     console.log('Checking database path on startup...');
+    
+    // Check for a previously saved database path in localStorage
+    const lastLoadedPath = localStorage.getItem('lastLoadedDatabasePath');
+    console.log('Last loaded database path from localStorage:', lastLoadedPath);
     
     if (window.electron && window.electron.database) {
       // First, check for a data directory in the app's path
@@ -307,14 +321,32 @@ document.addEventListener('DOMContentLoaded', () => {
       // Always check for local data directory first
       if (window.electron.database) {
         console.log('Always try to load from local data directory first');
-        displayDatabasePath('Local data directory');
-        await loadProducts(); // Try to load from local data directory
+        
+        // Only use the local data directory as default
+        // if we don't have a previously saved path
+        if (!lastLoadedPath) {
+          displayDatabasePath('Local data directory');
+          await loadProducts(); // Try to load from local data directory
+        }
       }
       
-      // Then check for user-selected database path
+      // Check for user-selected database path
       const dbPath = await window.electron.database.getPath();
       
-      if (dbPath) {
+      // If we have a previously loaded path from localStorage, use that
+      if (lastLoadedPath) {
+        console.log('Using database path from localStorage:', lastLoadedPath);
+        displayDatabasePath(lastLoadedPath);
+        
+        // If the path is the local data directory, use loadProducts()
+        if (lastLoadedPath === 'Local data directory') {
+          await loadProducts();
+        } else {
+          loadDatabaseSummary(lastLoadedPath);
+        }
+      } 
+      // Otherwise use the path from the main process if available
+      else if (dbPath) {
         console.log('Database path is set to:', dbPath);
         displayDatabasePath(dbPath);
         loadDatabaseSummary(dbPath);
@@ -384,6 +416,26 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadDatabaseSummary(dbPath) {
     if (window.electron && window.electron.database) {
       try {
+        // Clear existing products and categories before loading from new location
+        console.log("FORCE CLEARING all products array and filtered products");
+        window.allProducts = [];
+        window.filteredProducts = [];
+        filteredProducts = [];
+        categories.clear();
+        
+        // Immediately update UI to show empty state
+        if (productsTableBody) {
+          productsTableBody.innerHTML = '<tr><td colspan="7">Loading products...</td></tr>';
+        }
+        
+        // Force statistics to reset
+        updateDashboardStatistics(0, 0, 0, 0);
+        
+        // Store this database path in localStorage
+        if (dbPath) {
+          localStorage.setItem('lastLoadedDatabasePath', dbPath);
+        }
+        
         // List all JSON files in the directory
         const result = await window.electron.database.listFiles();
         
@@ -427,6 +479,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Log all parameters to debug
     console.log('loadProducts called with fileNames:', fileNames);
     
+    // Always start with empty products and categories - reset EVERYTHING
+    console.log('FORCE CLEARING all existing products, filtered products, and categories');
+    window.allProducts = [];
+    filteredProducts = [];
+    window.filteredProducts = [];
+    categories.clear();
+    
+    // Force UI update to show empty state immediately
+    if (productsTableBody) {
+      productsTableBody.innerHTML = '<tr><td colspan="7">Loading products...</td></tr>';
+    }
+    
+    // Reset statistics to zero
+    updateDashboardStatistics(0, 0, 0, 0);
+    
     // Get hardcoded path from meta tag
     const storagePath = document.querySelector('meta[name="storage-path"]');
     const hardcodedPath = storagePath ? storagePath.getAttribute('content') : null;
@@ -442,10 +509,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result && !result.error && result.data && result.data.products) {
           console.log('Successfully loaded products from app data directory:', result.data.products.length, 'products');
           console.log('Product IDs in loaded data:', result.data.products.map(p => p.id).join(', '));
-          allProducts = result.data.products;
+          
+          // Set products directly from the result (we already cleared existing ones above)
+          window.allProducts = result.data.products;
+          
+          // Store the data directory location in localStorage
+          localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
           
           // Extract categories
-          allProducts.forEach(product => {
+          window.allProducts.forEach(product => {
             if (product.category) {
               categories.add(product.category);
             }
@@ -467,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           // Update summary statistics
-          updateDashboardStatistics(allProducts.length, categories.size);
+          updateDashboardStatistics(window.allProducts.length, categories.size);
           
           // Update category filter and apply filters
           updateCategoryFilter();
@@ -496,10 +568,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load products from the products.json file structure
         if (data && data.products) {
           console.log("Loaded products from local JSON file:", data.products.length);
-          allProducts = data.products;
+          window.allProducts = data.products;
           
           // Extract categories from both products and category list
-          allProducts.forEach(product => {
+          window.allProducts.forEach(product => {
             if (product.category) {
               categories.add(product.category);
             }
@@ -521,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           // Update summary statistics
-          updateDashboardStatistics(allProducts.length, categories.size);
+          updateDashboardStatistics(window.allProducts.length, categories.size);
           
           // Update category filter
           updateCategoryFilter();
@@ -536,9 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     try {
-      allProducts = [];
-      categories.clear(); 
-      
       console.log('Loading products using electron database API');
       
       // First, try to load products.json directly
@@ -548,10 +617,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!result.error && result.data && result.data.products) {
         console.log('Successfully loaded products from database:', result.data.products.length);
         // Use the products from products.json
-        allProducts = result.data.products;
+        window.allProducts = result.data.products;
         
         // Extract categories from products
-        allProducts.forEach(product => {
+        window.allProducts.forEach(product => {
           if (product.category) {
             categories.add(product.category);
           }
@@ -571,8 +640,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
         }
-      } else {
+      } else if (fileNames && fileNames.length > 0) {
         // Fallback to loading individual product files if products.json isn't found
+        window.allProducts = []; // Ensure we start with empty array
+        
         for (const fileName of fileNames) {
           const result = await window.electron.database.readFile(fileName);
           
@@ -586,7 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const products = Array.isArray(result.data) ? result.data : [result.data];
             
             // Add products to the array
-            allProducts = [...allProducts, ...products];
+            window.allProducts = [...window.allProducts, ...products];
             
             // Extract categories
             products.forEach(product => {
@@ -602,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       // Update summary statistics
-      updateDashboardStatistics(allProducts.length, categories.size);
+      updateDashboardStatistics(window.allProducts.length, categories.size);
       
       // Update category filter
       updateCategoryFilter();
@@ -623,8 +694,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const dbPath = await window.electron.database.selectPath();
         
         if (dbPath) {
+          // FORCE CLEAR: Delete all products completely before changing databases
+          console.log('FORCE CLEARING all products before database switch');
+          window.allProducts = [];
+          window.filteredProducts = [];
+          categories = new Set(); // Reset categories
+          
+          // Force UI refresh with empty product set
+          if (productsTableBody) {
+            productsTableBody.innerHTML = '<tr><td colspan="7">Switching databases...</td></tr>';
+          }
+          
+          // Store selected path in localStorage for future reference
+          localStorage.setItem('lastLoadedDatabasePath', dbPath);
+          
+          // Display the new path
           displayDatabasePath(dbPath);
-          loadDatabaseSummary(dbPath);
           
           // Create the container if it doesn't exist
           let dbPathContainer = document.getElementById('db-path-container');
@@ -640,8 +725,14 @@ document.addEventListener('DOMContentLoaded', () => {
           // Update database path display
           displayDatabasePath(dbPath);
           
-          // If we don't have counts yet, update with empty data until loading is complete
-          updateDashboardStatistics(allProducts.length, categories.size);
+          // Reset statistics to zero to show loading state
+          updateDashboardStatistics(0, 0, 0, 0);
+          
+          // Now load from the new database
+          setTimeout(() => {
+            // Load with a slight delay to ensure clearing happens first
+            loadDatabaseSummary(dbPath);
+          }, 100);
         }
       }
     });
@@ -783,8 +874,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchTerm = productSearch ? productSearch.value.toLowerCase() : '';
     const categoryValue = categoryFilter ? categoryFilter.value : '';
     
+    // Start with empty filtered products
+    window.filteredProducts = [];
+    
     // Filter products
-    filteredProducts = allProducts.filter(product => {
+    window.filteredProducts = window.allProducts.filter(product => {
       // Check if product id, name or description contains search term
       const idMatch = product.id && product.id.toLowerCase().includes(searchTerm);
       const nameMatch = product.name && product.name.toLowerCase().includes(searchTerm);
@@ -800,7 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Sort products by popularity if available, otherwise by name
-    filteredProducts.sort((a, b) => {
+    window.filteredProducts.sort((a, b) => {
       if (a.popularity !== undefined && b.popularity !== undefined) {
         return b.popularity - a.popularity; // Higher popularity first
       } else {
@@ -808,6 +902,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return (a.name || '').localeCompare(b.name || '');
       }
     });
+    
+    // Update the local reference
+    filteredProducts = window.filteredProducts;
     
     // Update table and pagination
     updateProductsTable();
@@ -817,8 +914,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateProductsTable() {
     if (!productsTableBody) return;
     
+    // Use global filtered products for consistency
+    filteredProducts = window.filteredProducts;
+    
     // Calculate pagination
-    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
+    const totalPages = Math.max(1, Math.ceil(window.filteredProducts.length / itemsPerPage));
     currentPage = Math.min(currentPage, totalPages);
     
     // Update pagination controls
@@ -828,7 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Get products for current page
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const pageProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+    const pageProducts = window.filteredProducts.slice(startIndex, startIndex + itemsPerPage);
     
     // Clear the table
     productsTableBody.innerHTML = '';

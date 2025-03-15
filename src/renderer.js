@@ -1393,6 +1393,7 @@ function updateMobileThemeToggle() {
   
   // Modal field elements
   const productIdField = document.getElementById('product-id');
+  const productCustomIdField = document.getElementById('product-custom-id');
   const productTypeField = document.getElementById('product-type');
   const productNameField = document.getElementById('product-name');
   const productDescriptionField = document.getElementById('product-description');
@@ -1637,6 +1638,7 @@ function updateMobileThemeToggle() {
     
     // Basic fields
     if (productIdField) productIdField.value = product.id || '';
+    if (productCustomIdField) productCustomIdField.value = product.customId || '';
     if (productNameField) productNameField.value = product.name || '';
     if (productDescriptionField) productDescriptionField.value = product.description || '';
     if (productPriceField) productPriceField.value = product.price || '';
@@ -2179,6 +2181,7 @@ function updateMobileThemeToggle() {
     const updatedProduct = {
       ...currentEditingProduct,
       id: currentEditingProduct.id, // Make absolutely sure the ID is preserved
+      customId: productCustomIdField ? productCustomIdField.value : currentEditingProduct.customId,
       name: productNameField ? productNameField.value : currentEditingProduct.name,
       description: productDescriptionField ? productDescriptionField.value : currentEditingProduct.description,
       price: productPriceField ? parseFloat(productPriceField.value) : currentEditingProduct.price,
@@ -4546,8 +4549,14 @@ function exportProjectProductsToCSV(project) {
     }
   }
   
-  // CSV header
-  let csvContent = `Category,Product ID,Product Name,Type,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency}),Engineering Hours,Production Hours,Commissioning Hours,Total Hours\n`;
+  // Helper function to escape CSV fields
+  const escapeCsv = (field) => {
+    if (!field) return '';
+    let str = String(field);
+    // Remove any newlines and excessive whitespace
+    str = str.replace(/\s+/g, ' ').trim();
+    return str.includes(',') ? `"${str}"` : str;
+  };
   
   // Get all categories
   const categories = {};
@@ -4557,13 +4566,20 @@ function exportProjectProductsToCSV(project) {
     });
   }
   
+  // Create rows array to store all product data
+  const rows = [];
+  
   // Get all products by category
   project.products.forEach(product => {
     const productDetails = findProductById(product.productId);
     if (productDetails) {
-      const categoryName = product.categoryId ? 
+      // Get category name and ensure it's a simple string without formatting/newlines
+      let categoryName = product.categoryId ? 
         (categories[product.categoryId] || 'Unknown Category') : 
         'Uncategorized';
+      
+      // Ensure the category name is clean (no newlines, excessive spaces, etc.)
+      categoryName = categoryName.replace(/\s+/g, ' ').trim();
       
       // Convert prices to output currency
       const convertedUnitPrice = convertCurrency(
@@ -4575,13 +4591,6 @@ function exportProjectProductsToCSV(project) {
       
       const unitPrice = formatPrice(convertedUnitPrice, outputCurrency, false);
       const totalPriceFormatted = formatPrice(totalPrice, outputCurrency, false);
-      
-      // Escape fields that might contain commas
-      const escapeCsv = (field) => {
-        if (!field) return '';
-        const str = String(field);
-        return str.includes(',') ? `"${str}"` : str;
-      };
       
       // Get installation time values
       const engineeringHours = productDetails.installationTime?.engineering || 0;
@@ -4595,9 +4604,35 @@ function exportProjectProductsToCSV(project) {
       const totalCommissioningHours = commissioningHours * product.quantity;
       const grandTotalHours = totalHours * product.quantity;
       
-      // Add CSV row
-      csvContent += `${escapeCsv(categoryName)},${escapeCsv(productDetails.id)},${escapeCsv(productDetails.name)},${product.isOption ? 'Optional' : 'Required'},${product.quantity},${unitPrice},${totalPriceFormatted},${totalEngineeringHours},${totalProductionHours},${totalCommissioningHours},${grandTotalHours}\n`;
+      // Add to rows array
+      rows.push({
+        categoryName,
+        productId: productDetails.id,
+        customId: productDetails.customId || '',
+        productName: productDetails.name,
+        type: product.isOption ? 'Optional' : 'Required',
+        quantity: product.quantity,
+        unitPrice,
+        totalPrice: totalPriceFormatted,
+        engineeringHours: totalEngineeringHours,
+        productionHours: totalProductionHours,
+        commissioningHours: totalCommissioningHours,
+        totalHours: grandTotalHours
+      });
     }
+  });
+  
+  // Check if we have any rows
+  if (rows.length === 0) {
+    showNotification('No product details found to export', 'error');
+    return;
+  }
+  
+  // Create CSV content from rows array with clean formatting
+  let csvContent = `Category,Product ID,Custom ID,Product Name,Type,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency}),Engineering Hours,Production Hours,Commissioning Hours,Total Hours\n`;
+  
+  rows.forEach(row => {
+    csvContent += `${escapeCsv(row.categoryName)},${escapeCsv(row.productId)},${escapeCsv(row.customId)},${escapeCsv(row.productName)},${row.type},${row.quantity},${row.unitPrice},${row.totalPrice},${row.engineeringHours},${row.productionHours},${row.commissioningHours},${row.totalHours}\n`;
   });
   
   // Create Blob and download link
@@ -6471,7 +6506,12 @@ function getActiveProjectCategories() {
   const categoryElements = document.querySelectorAll('.project-product-category');
   categoryElements.forEach((el, index) => {
     const categoryId = el.dataset.categoryId;
-    const categoryName = el.querySelector('.category-name')?.textContent;
+    const categoryNameElement = el.querySelector('.category-name');
+    // Get text content and clean it up
+    let categoryName = categoryNameElement?.textContent || '';
+    // Remove any extra whitespace and newlines
+    categoryName = categoryName.replace(/\s+/g, ' ').trim();
+    
     if (categoryId && categoryName) {
       categories.push({
         id: categoryId,

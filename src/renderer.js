@@ -5573,17 +5573,7 @@ function generateProductPrintContent(project) {
       totalProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
       totalCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
       
-      // Add hours from bundled items
-      if (productDetails.isBundle && productDetails.bundleItems && productDetails.bundleItems.length > 0) {
-        productDetails.bundleItems.forEach(bundleItem => {
-          const bundledProduct = findProductById(bundleItem.productId);
-          if (bundledProduct) {
-            totalEngHours += (bundledProduct.installationTime?.engineering || 0) * bundleItem.quantity * product.quantity;
-            totalProdHours += (bundledProduct.installationTime?.production || 0) * bundleItem.quantity * product.quantity;
-            totalCommHours += (bundledProduct.installationTime?.commissioning || 0) * bundleItem.quantity * product.quantity;
-          }
-        });
-      }
+      // Note: We don't add hours from bundled items - only count hours from the bundle itself
     }
   });
   
@@ -5626,17 +5616,7 @@ function generateProductPrintContent(project) {
           categoryProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
           categoryCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
           
-          // Add hours from bundled items
-          if (productDetails.isBundle && productDetails.bundleItems && productDetails.bundleItems.length > 0) {
-            productDetails.bundleItems.forEach(bundleItem => {
-              const bundledProduct = findProductById(bundleItem.productId);
-              if (bundledProduct) {
-                categoryEngHours += (bundledProduct.installationTime?.engineering || 0) * bundleItem.quantity * product.quantity;
-                categoryProdHours += (bundledProduct.installationTime?.production || 0) * bundleItem.quantity * product.quantity;
-                categoryCommHours += (bundledProduct.installationTime?.commissioning || 0) * bundleItem.quantity * product.quantity;
-              }
-            });
-          }
+          // Note: We don't add hours from bundled items - only count hours from the bundle itself
         }
       });
       
@@ -5720,25 +5700,15 @@ function generateProductPrintContent(project) {
                   outputCurrency
                 );
                 
-                // Get bundled item installation time values
-                const bundledEngHours = bundledProduct.installationTime?.engineering || 0;
-                const bundledProdHours = bundledProduct.installationTime?.production || 0;
-                const bundledCommHours = bundledProduct.installationTime?.commissioning || 0;
-                
-                // Calculate total bundled item hours
-                const totalBundledEngHours = bundledEngHours * bundleItem.quantity * product.quantity;
-                const totalBundledProdHours = bundledProdHours * bundleItem.quantity * product.quantity;
-                const totalBundledCommHours = bundledCommHours * bundleItem.quantity * product.quantity;
-                
-                // Add bundle item row - with price shown as note only
+                // Add bundle item row - without hours since they're only counted at the bundle level
                 content += `
                   <tr class="bundle-subitem">
                     <td></td>
                     <td style="padding-left: 20px;">↳ ${bundledProduct.name}</td>
                     <td>${bundleItem.quantity * product.quantity}</td>
-                    <td>${totalBundledEngHours}</td>
-                    <td>${totalBundledProdHours}</td>
-                    <td>${totalBundledCommHours}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
                     <td colspan="2" style="font-style: italic; color: #666;">Note: ${formatPrice(bundledItemUnitPrice, outputCurrency)} each</td>
                   </tr>
                 `;
@@ -5781,17 +5751,7 @@ function generateProductPrintContent(project) {
         uncategorizedProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
         uncategorizedCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
         
-        // Add hours from bundled items
-        if (productDetails.isBundle && productDetails.bundleItems && productDetails.bundleItems.length > 0) {
-          productDetails.bundleItems.forEach(bundleItem => {
-            const bundledProduct = findProductById(bundleItem.productId);
-            if (bundledProduct) {
-              uncategorizedEngHours += (bundledProduct.installationTime?.engineering || 0) * bundleItem.quantity * product.quantity;
-              uncategorizedProdHours += (bundledProduct.installationTime?.production || 0) * bundleItem.quantity * product.quantity;
-              uncategorizedCommHours += (bundledProduct.installationTime?.commissioning || 0) * bundleItem.quantity * product.quantity;
-            }
-          });
-        }
+        // Note: We don't add hours from bundled items - only count hours from the bundle itself
       }
     });
     
@@ -5872,25 +5832,15 @@ function generateProductPrintContent(project) {
                 outputCurrency
               );
               
-              // Get bundled item installation time values
-              const bundledEngHours = bundledProduct.installationTime?.engineering || 0;
-              const bundledProdHours = bundledProduct.installationTime?.production || 0;
-              const bundledCommHours = bundledProduct.installationTime?.commissioning || 0;
-              
-              // Calculate total bundled item hours
-              const totalBundledEngHours = bundledEngHours * bundleItem.quantity * product.quantity;
-              const totalBundledProdHours = bundledProdHours * bundleItem.quantity * product.quantity;
-              const totalBundledCommHours = bundledCommHours * bundleItem.quantity * product.quantity;
-              
-              // Add bundle item row - with price shown as note only
+              // Add bundle item row - without hours since they're only counted at the bundle level
               content += `
                 <tr class="bundle-subitem">
                   <td></td>
                   <td style="padding-left: 20px;">↳ ${bundledProduct.name}</td>
                   <td>${bundleItem.quantity * product.quantity}</td>
-                  <td>${totalBundledEngHours}</td>
-                  <td>${totalBundledProdHours}</td>
-                  <td>${totalBundledCommHours}</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
                   <td colspan="2" style="font-style: italic; color: #666;">Note: ${formatPrice(bundledItemUnitPrice, outputCurrency)} each</td>
                 </tr>
               `;

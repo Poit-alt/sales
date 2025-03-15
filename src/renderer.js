@@ -4,6 +4,31 @@
 window.allProducts = [];
 window.filteredProducts = [];
 
+// Function to show a notification message
+function showNotification(message, type = 'info') {
+  console.log(`Notification (${type}): ${message}`);
+  
+  // Create notification element if it doesn't exist
+  let notification = document.getElementById('notification');
+  if (!notification) {
+    notification = document.createElement('div');
+    notification.id = 'notification';
+    document.body.appendChild(notification);
+  }
+  
+  // Set the message and type
+  notification.textContent = message;
+  notification.className = `notification ${type}`;
+  
+  // Show the notification
+  notification.classList.add('show');
+  
+  // Hide after a delay
+  setTimeout(() => {
+    notification.classList.remove('show');
+  }, 3000);
+}
+
 // Find a product by its ID (global function)
 function findProductById(productId) {
   // Check if we have product data
@@ -121,16 +146,175 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Function to create/update mobile theme toggle button
-  function updateMobileThemeToggle() {
-    const isMobile = window.innerWidth <= 768;
-    const isSidebarCollapsed = document.body.classList.contains('collapsed-sidebar');
-    
-    // Remove existing mobile theme toggle if it exists
-    const existingToggle = document.querySelector('.theme-toggle-mobile');
-    if (existingToggle) {
-      existingToggle.remove();
+  // Load user settings from local storage and app data
+function loadUserSettings() {
+  console.log('Loading user settings...');
+  
+  // First try to load from localStorage for backward compatibility
+  const userName = localStorage.getItem('userName');
+  const userRole = localStorage.getItem('userRole');
+  const defaultCurrency = localStorage.getItem('defaultCurrency');
+  
+  // Populate form fields if data exists
+  if (userName) {
+    const userNameInput = document.getElementById('user-name');
+    if (userNameInput) userNameInput.value = userName;
+  }
+  
+  if (userRole) {
+    const userRoleSelect = document.getElementById('user-role');
+    if (userRoleSelect) userRoleSelect.value = userRole;
+  }
+  
+  if (defaultCurrency) {
+    // Set the default currency in the settings page
+    const defaultCurrencySelect = document.getElementById('default-currency');
+    if (defaultCurrencySelect && defaultCurrencySelect.querySelector(`option[value="${defaultCurrency}"]`)) {
+      defaultCurrencySelect.value = defaultCurrency;
     }
+    
+    // Also update other currency selects throughout the app for consistency
+    const currencySelects = document.querySelectorAll('select[id$="-currency"]');
+    currencySelects.forEach(select => {
+      if (select && select.querySelector(`option[value="${defaultCurrency}"]`)) {
+        select.value = defaultCurrency;
+      }
+    });
+  }
+  
+  // Try to load from app data storage - use same special file approach
+  if (window.electron && window.electron.database && window.electron.database.readFile) {
+    window.electron.database.readFile('__app_settings__.json')
+      .then(result => {
+        if (!result.error && result.data) {
+          const appSettings = result.data;
+          console.log('Loaded app settings:', appSettings);
+          
+          // Apply user name if set
+          if (appSettings.userName) {
+            const userNameInput = document.getElementById('user-name');
+            if (userNameInput) userNameInput.value = appSettings.userName;
+          }
+          
+          // Apply user role if set
+          if (appSettings.userRole) {
+            const userRoleSelect = document.getElementById('user-role');
+            if (userRoleSelect) userRoleSelect.value = appSettings.userRole;
+          }
+          
+          // Apply default currency if set
+          if (appSettings.defaultCurrency) {
+            // Set the default currency in the settings page
+            const defaultCurrencySelect = document.getElementById('default-currency');
+            if (defaultCurrencySelect && defaultCurrencySelect.querySelector(`option[value="${appSettings.defaultCurrency}"]`)) {
+              defaultCurrencySelect.value = appSettings.defaultCurrency;
+            }
+            
+            // Also update other currency selects throughout the app for consistency
+            const currencySelects = document.querySelectorAll('select[id$="-currency"]');
+            currencySelects.forEach(select => {
+              if (select && select.querySelector(`option[value="${appSettings.defaultCurrency}"]`)) {
+                select.value = appSettings.defaultCurrency;
+              }
+            });
+          }
+          
+          // Apply categories if they exist
+          if (appSettings.categories && Array.isArray(appSettings.categories)) {
+            // Store categories for later use
+            window.appCategories = appSettings.categories;
+            
+            // Update the UI
+            renderCategoriesInSettings();
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Error loading settings from app data:', err);
+      });
+  }
+}
+
+// Save user settings to both localStorage and app data
+function saveUserSettings() {
+  console.log('Saving user settings...');
+  
+  // Get values from form
+  const userNameInput = document.getElementById('user-name');
+  const userRoleSelect = document.getElementById('user-role');
+  const userName = userNameInput ? userNameInput.value.trim() : '';
+  const userRole = userRoleSelect ? userRoleSelect.value : 'staff';
+  
+  // Get the default currency from settings
+  const defaultCurrencySelect = document.getElementById('default-currency');
+  const defaultCurrency = defaultCurrencySelect ? defaultCurrencySelect.value : 'USD';
+  
+  // Get categories from the UI
+  const categories = [];
+  const categoryItems = document.querySelectorAll('.category-item');
+  categoryItems.forEach((item, index) => {
+    const categoryId = item.dataset.id;
+    const categoryName = item.querySelector('.category-title').textContent.trim();
+    
+    categories.push({
+      id: categoryId,
+      name: categoryName,
+      order: index
+    });
+  });
+  
+  // Save to localStorage for backward compatibility
+  localStorage.setItem('userName', userName);
+  localStorage.setItem('userRole', userRole);
+  localStorage.setItem('defaultCurrency', defaultCurrency);
+  
+  // Store categories globally
+  window.appCategories = categories;
+  
+  // Create the settings object to save
+  const settings = {
+    userName,
+    userRole,
+    defaultCurrency,
+    categories
+  };
+  
+  // Save to app data storage - use a special saving approach 
+  // to ensure settings go to the app's data directory regardless of database path
+  if (window.electron && window.electron.database && window.electron.database.saveFile) {
+    // Special parameter to indicate this is app settings, not user data
+    const specialFileName = '__app_settings__.json';
+    
+    window.electron.database.saveFile(specialFileName, settings)
+      .then(result => {
+        if (result.success) {
+          console.log('Settings saved to app data successfully');
+          showNotification('Settings saved successfully', 'success');
+        } else {
+          console.error('Error saving settings to app data:', result.error);
+          showNotification('Error saving settings: ' + result.error, 'error');
+        }
+      })
+      .catch(err => {
+        console.error('Exception saving settings:', err);
+        showNotification('Error saving settings', 'error');
+      });
+  } else {
+    console.log('Electron database API not available, using localStorage only');
+    showNotification('Settings saved to browser storage', 'info');
+  }
+}
+
+// Function to create/update mobile theme toggle button
+function updateMobileThemeToggle() {
+  const isMobile = window.innerWidth <= 768;
+  const isSidebarCollapsed = document.body.classList.contains('collapsed-sidebar');
+  
+  // Remove existing mobile theme toggle if it exists
+  const existingToggle = document.querySelector('.theme-toggle-mobile');
+  if (existingToggle) {
+    existingToggle.remove();
+  }
     
     // Create new mobile theme toggle if needed
     if (isMobile && isSidebarCollapsed) {
@@ -2152,6 +2336,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveUserSettingsBtn = document.getElementById('save-user-settings');
   if (saveUserSettingsBtn) {
     saveUserSettingsBtn.addEventListener('click', () => {
+      // Use our enhanced function that saves to app data too
       saveUserSettings();
     });
   }
@@ -2197,8 +2382,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Functions for user settings
 
-// Save user settings to localStorage
-function saveUserSettings() {
+// Original save user settings to localStorage function 
+// Renamed to avoid conflict with our enhanced version
+function saveUserSettingsToLocalStorage() {
   const userName = document.getElementById('user-name').value.trim();
   const userRole = document.getElementById('user-role').value;
   
@@ -2239,8 +2425,14 @@ function saveProductCategories() {
     order: index
   }));
   
-  // Save to localStorage
+  // Save to localStorage for backward compatibility
   localStorage.setItem('productCategories', JSON.stringify(categories));
+  
+  // Store categories globally
+  window.appCategories = categories;
+  
+  // Save to user settings
+  saveUserSettings();
   
   // Show success message
   showNotification('Product categories saved successfully', 'success');
@@ -2333,7 +2525,13 @@ function generateCategoryId() {
 
 // Load product categories
 function loadProductCategories() {
-  // Try to load from localStorage
+  // First check if we have categories in memory from app data
+  if (window.appCategories && Array.isArray(window.appCategories) && window.appCategories.length > 0) {
+    console.log('Using app categories from memory:', window.appCategories);
+    return window.appCategories;
+  }
+  
+  // Then try to load from localStorage for backward compatibility
   const savedCategories = localStorage.getItem('productCategories');
   
   if (savedCategories) {

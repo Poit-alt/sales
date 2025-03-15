@@ -29,6 +29,61 @@ function showNotification(message, type = 'info') {
   }, 3000);
 }
 
+// Modal input function to replace prompt()
+function showInputModal(title, message, defaultValue = '', callback) {
+  const inputModal = document.getElementById('input-modal');
+  const modalTitle = document.getElementById('input-modal-title');
+  const modalLabel = document.getElementById('input-modal-label');
+  const modalInput = document.getElementById('input-modal-value');
+  const confirmBtn = document.getElementById('input-modal-confirm');
+  const cancelBtn = document.getElementById('input-modal-cancel');
+  const closeBtn = inputModal.querySelector('.modal-close');
+  
+  // Set modal content
+  modalTitle.textContent = title || 'Enter Information';
+  modalLabel.textContent = message || 'Please enter a value:';
+  modalInput.value = defaultValue;
+  
+  // Show the modal
+  inputModal.classList.add('active');
+  modalInput.focus();
+  
+  // Handle confirm button
+  const handleConfirm = () => {
+    const value = modalInput.value.trim();
+    inputModal.classList.remove('active');
+    if (callback) callback(value);
+    cleanup();
+  };
+  
+  // Handle cancel/close
+  const handleCancel = () => {
+    inputModal.classList.remove('active');
+    if (callback) callback(null);
+    cleanup();
+  };
+  
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') handleConfirm();
+    if (e.key === 'Escape') handleCancel();
+  };
+  
+  // Add event listeners
+  confirmBtn.addEventListener('click', handleConfirm);
+  cancelBtn.addEventListener('click', handleCancel);
+  closeBtn.addEventListener('click', handleCancel);
+  modalInput.addEventListener('keydown', handleKeyPress);
+  
+  // Cleanup function to remove event listeners
+  function cleanup() {
+    confirmBtn.removeEventListener('click', handleConfirm);
+    cancelBtn.removeEventListener('click', handleCancel);
+    closeBtn.removeEventListener('click', handleCancel);
+    modalInput.removeEventListener('keydown', handleKeyPress);
+  }
+}
+
 // Find a product by its ID (global function)
 function findProductById(productId) {
   // Check if we have product data
@@ -5092,7 +5147,7 @@ function generateProductPrintView(project) {
     
     // Create each category section
     sortedCategories.forEach(category => {
-      // Filter products for this category
+      // Filter products for this category (preserves the order from the products array)
       const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
       
       // Skip empty categories for print view
@@ -5341,18 +5396,54 @@ function getCurrentProject() {
 // Helper to get products from active project view
 function getActiveProjectProducts() {
   const products = [];
-  const productElements = document.querySelectorAll('.product-item');
-  productElements.forEach((el, index) => {
-    const productId = el.querySelector('.product-item-id')?.textContent;
-    const quantity = parseInt(el.querySelector('.product-item-quantity')?.textContent) || 1;
-    if (productId) {
-      products.push({
-        productId,
-        quantity,
-        categoryId: el.closest('.category-products')?.parentElement?.dataset?.categoryId
+  
+  // First get categorized products in order they appear in each category
+  const categoryContainers = document.querySelectorAll('.project-product-category');
+  categoryContainers.forEach(categoryContainer => {
+    const categoryId = categoryContainer.dataset.categoryId;
+    const categoryProductsEl = categoryContainer.querySelector('.category-products');
+    
+    if (categoryProductsEl) {
+      const productElements = categoryProductsEl.querySelectorAll('.product-item');
+      
+      productElements.forEach(el => {
+        const productId = el.querySelector('.product-item-id')?.textContent;
+        const quantity = parseInt(el.querySelector('.product-item-quantity')?.textContent) || 1;
+        const isOption = el.classList.contains('option');
+        
+        if (productId) {
+          products.push({
+            productId,
+            quantity,
+            categoryId,
+            isOption
+          });
+        }
       });
     }
   });
+  
+  // Then get uncategorized products
+  const uncategorizedContainer = document.querySelector('.uncategorized-products');
+  if (uncategorizedContainer) {
+    const productElements = uncategorizedContainer.querySelectorAll('.product-item');
+    
+    productElements.forEach(el => {
+      const productId = el.querySelector('.product-item-id')?.textContent;
+      const quantity = parseInt(el.querySelector('.product-item-quantity')?.textContent) || 1;
+      const isOption = el.classList.contains('option');
+      
+      if (productId) {
+        products.push({
+          productId,
+          quantity,
+          categoryId: null,
+          isOption
+        });
+      }
+    });
+  }
+  
   return products;
 }
 
@@ -5844,6 +5935,9 @@ function populateProductsTab(project) {
   
   // Setup drag and drop for categorization
   setupProductCategorization();
+  
+  // Setup drag and drop for product reordering within categories
+  setupProductDragDrop();
 }
 
 // Create a product element for the products list
@@ -5857,6 +5951,9 @@ function createProductElement(product, index, projectCurrency) {
     productItem.classList.add('option');
   }
   productItem.dataset.index = index;
+  
+  // Make the product item draggable for reordering
+  productItem.draggable = true;
   
   if (productDetails) {
     // Get the source currency of the product
@@ -5993,6 +6090,121 @@ function setupProductCategorization() {
   });
 }
 
+// Set up drag and drop for product reordering within categories
+function setupProductDragDrop() {
+  // Get all product items
+  const productItems = document.querySelectorAll('.product-item');
+  
+  productItems.forEach(item => {
+    // Setup drag start
+    item.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('product-index', item.dataset.index);
+      e.dataTransfer.setData('product-category', item.closest('.category-products')?.parentElement?.dataset?.categoryId || 'uncategorized');
+      // Add a class to style during dragging
+      item.classList.add('dragging');
+      
+      // Set a delay for visual feedback
+      setTimeout(() => {
+        item.style.opacity = '0.4';
+      }, 0);
+    });
+    
+    // Setup drag end
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      item.style.opacity = '1';
+    });
+    
+    // Setup drag over (to handle reordering within same category)
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const draggingItem = document.querySelector('.product-item.dragging');
+      
+      if (draggingItem && draggingItem !== item) {
+        const currentCategory = item.closest('.category-products');
+        const draggingCategory = draggingItem.closest('.category-products');
+        
+        // Only handle reordering if in the same category
+        if (currentCategory && draggingCategory && currentCategory === draggingCategory) {
+          const box = item.getBoundingClientRect();
+          const offset = e.clientY - box.top;
+          
+          if (offset < box.height / 2) {
+            // Insert before
+            currentCategory.insertBefore(draggingItem, item);
+          } else {
+            // Insert after
+            currentCategory.insertBefore(draggingItem, item.nextSibling);
+          }
+        }
+      }
+    });
+  });
+  
+  // Handle drop to update the model
+  document.addEventListener('dragend', () => {
+    updateProductOrdersInModel();
+  });
+}
+
+// Update the product orders in the model after drag and drop
+function updateProductOrdersInModel() {
+  const detailsModal = document.getElementById('project-details-modal');
+  if (!detailsModal) return;
+  
+  const projectId = detailsModal.dataset.projectId;
+  const project = projects.find(p => p.id === projectId);
+  
+  if (!project || !project.products) return;
+  
+  // Create a new array to hold the reordered products
+  const reorderedProducts = [];
+  
+  // First handle categorized products
+  const categoryContainers = document.querySelectorAll('.project-product-category');
+  categoryContainers.forEach(categoryContainer => {
+    const categoryId = categoryContainer.dataset.categoryId;
+    const categoryProductsEl = categoryContainer.querySelector('.category-products');
+    
+    if (categoryProductsEl) {
+      const productElements = categoryProductsEl.querySelectorAll('.product-item');
+      
+      productElements.forEach(productEl => {
+        const originalIndex = parseInt(productEl.dataset.index, 10);
+        if (!isNaN(originalIndex) && project.products[originalIndex]) {
+          const product = {...project.products[originalIndex]};
+          product.categoryId = categoryId; // Ensure category is set correctly
+          reorderedProducts.push(product);
+        }
+      });
+    }
+  });
+  
+  // Then handle uncategorized products
+  const uncategorizedContainer = document.querySelector('.uncategorized-products');
+  if (uncategorizedContainer) {
+    const productElements = uncategorizedContainer.querySelectorAll('.product-item');
+    
+    productElements.forEach(productEl => {
+      const originalIndex = parseInt(productEl.dataset.index, 10);
+      if (!isNaN(originalIndex) && project.products[originalIndex]) {
+        const product = {...project.products[originalIndex]};
+        product.categoryId = null; // Ensure product is uncategorized
+        reorderedProducts.push(product);
+      }
+    });
+  }
+  
+  // If we have all the products, update the project
+  if (reorderedProducts.length === project.products.length) {
+    project.products = reorderedProducts;
+    showNotification('Product order updated', 'success');
+  } else {
+    console.error('Product count mismatch during reordering');
+    showNotification('Error updating product order', 'error');
+  }
+}
+
 // Move a product to a category
 function moveProductToCategory(productIndex, categoryId, sourceCategory) {
   const detailsModal = document.getElementById('project-details-modal');
@@ -6003,8 +6215,55 @@ function moveProductToCategory(productIndex, categoryId, sourceCategory) {
   
   if (!project || !project.products) return;
   
-  // Update the product's category
-  project.products[productIndex].categoryId = categoryId;
+  // Get the product to move
+  const productToMove = project.products[productIndex];
+  if (!productToMove) return;
+  
+  // Clone the product with the new category ID
+  const updatedProduct = {
+    ...productToMove,
+    categoryId: categoryId
+  };
+  
+  // Remove the product from its original position
+  project.products.splice(productIndex, 1);
+  
+  // If there are products in the target category, add it to the end of that group
+  const targetCategoryProducts = project.products.filter(p => p.categoryId === categoryId);
+  
+  if (targetCategoryProducts.length > 0) {
+    // Find the index of the last product in this category
+    const lastIndex = project.products.findIndex(p => p.categoryId === categoryId);
+    let insertIndex = lastIndex;
+    
+    // Find the actual last index of the category (there may be multiple)
+    for (let i = lastIndex + 1; i < project.products.length; i++) {
+      if (project.products[i].categoryId === categoryId) {
+        insertIndex = i;
+      } else if (insertIndex !== lastIndex) {
+        // We found the end of the category group
+        break;
+      }
+    }
+    
+    // Insert after the last product in the category
+    project.products.splice(insertIndex + 1, 0, updatedProduct);
+  } else {
+    // If no products in target category, just append to the end
+    project.products.push(updatedProduct);
+  }
+  
+  // Get the category name for the notification
+  let categoryName = "uncategorized";
+  if (categoryId !== null) {
+    const targetCategory = project.productCategories.find(c => c.id === categoryId);
+    if (targetCategory && targetCategory.name) {
+      categoryName = targetCategory.name;
+    }
+  }
+  
+  // Show feedback
+  showNotification(`Product moved to ${categoryName}`, 'success');
   
   // Update the UI
   populateProductsTab(project);
@@ -6020,27 +6279,37 @@ function addNewCategory() {
   
   if (!project) return;
   
-  // Show a prompt for the category name
-  const categoryName = prompt('Enter a name for the new category:');
-  if (!categoryName) return;
-  
-  // Initialize categories array if needed
-  if (!project.productCategories) {
-    project.productCategories = [];
-  }
-  
-  // Add the new category
-  const newCategory = {
-    id: generateCategoryId(),
-    name: categoryName,
-    order: project.productCategories.length,
-    expanded: true
-  };
-  
-  project.productCategories.push(newCategory);
-  
-  // Update the UI
-  populateProductsTab(project);
+  // Show our custom input modal instead of prompt()
+  showInputModal(
+    'Add Category', 
+    'Enter a name for the new category:', 
+    '', 
+    (categoryName) => {
+      // If user cancelled or entered empty string, do nothing
+      if (!categoryName) return;
+      
+      // Initialize categories array if needed
+      if (!project.productCategories) {
+        project.productCategories = [];
+      }
+      
+      // Add the new category
+      const newCategory = {
+        id: generateCategoryId(),
+        name: categoryName,
+        order: project.productCategories.length,
+        expanded: true
+      };
+      
+      project.productCategories.push(newCategory);
+      
+      // Show success notification
+      showNotification(`Category "${categoryName}" added successfully`, 'success');
+      
+      // Update the UI
+      populateProductsTab(project);
+    }
+  );
 }
 
 // Remove a category from the project

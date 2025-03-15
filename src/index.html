@@ -1058,5 +1058,25 @@
     </div>
     
     <script src="renderer.js"></script>
+    
+    <!-- Input Modal Dialog -->
+    <div id="input-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="input-modal-title">Enter Information</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label id="input-modal-label" for="input-modal-value">Please enter a value:</label>
+            <input type="text" id="input-modal-value" class="form-control">
+          </div>
+          <div class="form-actions">
+            <button type="button" id="input-modal-cancel" class="button button-outline">Cancel</button>
+            <button type="button" id="input-modal-confirm" class="button">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

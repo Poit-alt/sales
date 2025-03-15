@@ -1595,6 +1595,16 @@ function updateMobileThemeToggle() {
     // Features
     populateFeatures(product.features || []);
     
+    // Installation times
+    const timeEngineering = document.getElementById('product-time-engineering');
+    const timeProduction = document.getElementById('product-time-production');
+    const timeCommissioning = document.getElementById('product-time-commissioning');
+    
+    // Set installation time values if they exist, otherwise default to 0
+    if (timeEngineering) timeEngineering.value = product.installationTime?.engineering || 0;
+    if (timeProduction) timeProduction.value = product.installationTime?.production || 0;
+    if (timeCommissioning) timeCommissioning.value = product.installationTime?.commissioning || 0;
+    
     // Bundle items
     if (isBundle && product.bundleItems) {
       populateBundleItems(product.bundleItems);
@@ -2187,6 +2197,17 @@ function updateMobileThemeToggle() {
         .filter(value => value !== '');
     }
     
+    // Update installation times
+    const timeEngineering = document.getElementById('product-time-engineering');
+    const timeProduction = document.getElementById('product-time-production');
+    const timeCommissioning = document.getElementById('product-time-commissioning');
+    
+    updatedProduct.installationTime = {
+      engineering: timeEngineering ? parseFloat(timeEngineering.value) || 0 : 0,
+      production: timeProduction ? parseFloat(timeProduction.value) || 0 : 0,
+      commissioning: timeCommissioning ? parseFloat(timeCommissioning.value) || 0 : 0
+    };
+    
     // Update product in the allProducts array
     console.log(`Searching for product with ID ${updatedProduct.id} in allProducts array of length ${allProducts.length}`);
     const productIndex = allProducts.findIndex(p => p.id === updatedProduct.id);
@@ -2279,6 +2300,27 @@ function updateMobileThemeToggle() {
       Price: ${formatPrice(product.price, product.currency)}
       Status: ${product.status || 'Active'}
     `;
+    
+    // Add installation time information if available
+    if (product.installationTime) {
+      const totalTime = (product.installationTime.engineering || 0) + 
+                        (product.installationTime.production || 0) + 
+                        (product.installationTime.commissioning || 0);
+      
+      if (totalTime > 0) {
+        details += `\n\nInstallation Time (hours):`;
+        if (product.installationTime.engineering > 0) {
+          details += `\n- Engineering: ${product.installationTime.engineering}`;
+        }
+        if (product.installationTime.production > 0) {
+          details += `\n- Production: ${product.installationTime.production}`;
+        }
+        if (product.installationTime.commissioning > 0) {
+          details += `\n- Commissioning: ${product.installationTime.commissioning}`;
+        }
+        details += `\n- Total: ${totalTime}`;
+      }
+    }
     
     // For bundles, add bundle-specific information
     if (product.isBundle) {
@@ -5137,8 +5179,34 @@ function generateProductPrintView(project) {
     }
   });
   
+  // Calculate total installation time
+  let totalEngineeringTime = 0;
+  let totalProductionTime = 0;
+  let totalCommissioningTime = 0;
+  
+  (project.products || []).forEach(product => {
+    const productDetails = findProductById(product.productId);
+    if (productDetails && productDetails.installationTime) {
+      totalEngineeringTime += (productDetails.installationTime.engineering || 0) * product.quantity;
+      totalProductionTime += (productDetails.installationTime.production || 0) * product.quantity;
+      totalCommissioningTime += (productDetails.installationTime.commissioning || 0) * product.quantity;
+    }
+  });
+  
+  const totalInstallationTime = totalEngineeringTime + totalProductionTime + totalCommissioningTime;
+  
   // Set total in summary section using project currency
-  document.getElementById('print-view-total').textContent = `Total Value: ${formatMoney(totalValue, projectCurrency)}`;
+  const totalElement = document.getElementById('print-view-total');
+  totalElement.innerHTML = `
+    <div>Total Value: ${formatMoney(totalValue, projectCurrency)}</div>
+    ${totalInstallationTime > 0 ? `
+    <div style="margin-top:10px;font-size:90%;">
+      <strong>Total Installation Time:</strong> ${totalInstallationTime}h 
+      (Engineering: ${totalEngineeringTime}h, 
+      Production: ${totalProductionTime}h, 
+      Commissioning: ${totalCommissioningTime}h)
+    </div>` : ''}
+  `;
   
   // Process categories
   if (project.productCategories && project.productCategories.length > 0) {
@@ -5209,6 +5277,8 @@ function generateProductPrintView(project) {
         if (productDetails) {
           const totalPrice = productDetails.price * product.quantity;
           const row = document.createElement('tr');
+          
+          // Create the main product row
           row.innerHTML = `
             <td>${productDetails.id}</td>
             <td>${productDetails.name}${product.isOption ? ' <span style="color:#666;font-size:80%;font-style:italic">(Optional)</span>' : ''}</td>
@@ -5217,6 +5287,30 @@ function generateProductPrintView(project) {
             <td>${formatPrice(totalPrice, productDetails.currency)}</td>
           `;
           tableBody.appendChild(row);
+          
+          // Add installation time information if available
+          if (productDetails.installationTime) {
+            const engineeringTime = productDetails.installationTime.engineering || 0;
+            const productionTime = productDetails.installationTime.production || 0;
+            const commissioningTime = productDetails.installationTime.commissioning || 0;
+            const totalTime = engineeringTime + productionTime + commissioningTime;
+            
+            if (totalTime > 0) {
+              const timeRow = document.createElement('tr');
+              timeRow.className = 'installation-time-row';
+              timeRow.innerHTML = `
+                <td></td>
+                <td colspan="4" style="font-size:90%;color:#555;">
+                  <strong>Installation Time:</strong> 
+                  ${engineeringTime > 0 ? `Engineering: ${engineeringTime}h ` : ''}
+                  ${productionTime > 0 ? `Production: ${productionTime}h ` : ''}
+                  ${commissioningTime > 0 ? `Commissioning: ${commissioningTime}h ` : ''}
+                  (Total: ${totalTime}h)
+                </td>
+              `;
+              tableBody.appendChild(timeRow);
+            }
+          }
         }
       });
       
@@ -5285,6 +5379,30 @@ function generateProductPrintView(project) {
           <td>${formatPrice(totalPrice, productDetails.currency)}</td>
         `;
         tableBody.appendChild(row);
+        
+        // Add installation time information if available
+        if (productDetails.installationTime) {
+          const engineeringTime = productDetails.installationTime.engineering || 0;
+          const productionTime = productDetails.installationTime.production || 0;
+          const commissioningTime = productDetails.installationTime.commissioning || 0;
+          const totalTime = engineeringTime + productionTime + commissioningTime;
+          
+          if (totalTime > 0) {
+            const timeRow = document.createElement('tr');
+            timeRow.className = 'installation-time-row';
+            timeRow.innerHTML = `
+              <td></td>
+              <td colspan="4" style="font-size:90%;color:#555;">
+                <strong>Installation Time:</strong> 
+                ${engineeringTime > 0 ? `Engineering: ${engineeringTime}h ` : ''}
+                ${productionTime > 0 ? `Production: ${productionTime}h ` : ''}
+                ${commissioningTime > 0 ? `Commissioning: ${commissioningTime}h ` : ''}
+                (Total: ${totalTime}h)
+              </td>
+            `;
+            tableBody.appendChild(timeRow);
+          }
+        }
       }
     });
     

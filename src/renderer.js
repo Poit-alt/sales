@@ -552,7 +552,7 @@ function updateMobileThemeToggle() {
         }
       }
       
-      // Move db-path-container based on selected tab
+      // Products database path should only be visible in products tab
       const dbPathContainer = document.getElementById('db-path-container');
       if (dbPathContainer) {
         if (target === 'products') {
@@ -562,12 +562,14 @@ function updateMobileThemeToggle() {
             productsHeader.prepend(dbPathContainer);
           }
         } else {
-          // Hide the db path container from other tabs
+          // Hide it when not in products tab
           if (dbPathContainer.parentNode) {
             dbPathContainer.parentNode.removeChild(dbPathContainer);
           }
         }
       }
+      
+      // Projects database path container is handled separately and already in the HTML
     });
   });
   
@@ -627,9 +629,18 @@ function updateMobileThemeToggle() {
           await loadProducts();
         } else {
           console.log('Loading from custom directory based on localStorage setting:', lastLoadedPath);
-          // Force setting the database path in main process
-          await window.electron.database.selectPath(lastLoadedPath);
-          loadDatabaseSummary(lastLoadedPath);
+          // Don't open a folder dialog on startup
+          // Instead, just use the saved path directly
+          try {
+            // Just use the lastLoadedPath directly without reopening the folder dialog
+            console.log('Using the stored path from localStorage without opening folder dialog');
+            loadDatabaseSummary(lastLoadedPath);
+          } catch (err) {
+            console.error('Error loading from saved database path:', err);
+            // Fallback to local data directory
+            displayDatabasePath('Local data directory');
+            await loadProducts();
+          }
         }
       } 
       // Otherwise check if there's a path in main process
@@ -652,28 +663,34 @@ function updateMobileThemeToggle() {
     }
   }
   
-  // Display the database path in UI
+  // Display the products database path in UI
   function displayDatabasePath(path) {
-    if (!dbPathContainer) return;
+    // Update only the products database path container
+    const container = document.getElementById('db-path-container');
     
-    dbPathContainer.innerHTML = `
-      <div class="db-path-display">
-        <div class="path">${path}</div>
-        <div class="status connected">Connected</div>
-      </div>
-    `;
+    if (container) {
+      container.innerHTML = `
+        <div class="db-path-display">
+          <div class="path">${path}</div>
+          <div class="status connected">Connected</div>
+        </div>
+      `;
+    }
   }
   
-  // Display when no database path is set
+  // Display when no products database path is set
   function displayNoDatabasePath() {
-    if (!dbPathContainer) return;
+    // Update only the products database path container
+    const container = document.getElementById('db-path-container');
     
-    dbPathContainer.innerHTML = `
-      <div class="db-path-display">
-        <div class="path">No database directory selected</div>
-        <div class="status disconnected">Not Connected</div>
-      </div>
-    `;
+    if (container) {
+      container.innerHTML = `
+        <div class="db-path-display">
+          <div class="path">No database directory selected</div>
+          <div class="status disconnected">Not Connected</div>
+        </div>
+      `;
+    }
   }
   
   // Function to update the dashboard statistics
@@ -804,8 +821,12 @@ function updateMobileThemeToggle() {
           // Set products directly from the result (we already cleared existing ones above)
           window.allProducts = result.data.products;
           
-          // Store the data directory location in localStorage
-          localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
+          // Previously: localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
+          // Do not override the lastLoadedDatabasePath if loading from local data directory
+          if (!localStorage.getItem('lastLoadedDatabasePath')) {
+            // Only set it if it's not already set
+            localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
+          }
           
           // Extract categories
           window.allProducts.forEach(product => {
@@ -2582,8 +2603,18 @@ function saveProductCategories() {
   // Store categories globally
   window.appCategories = categories;
   
-  // Save to user settings
-  saveUserSettings();
+  // Save settings
+  try {
+    // Save to app settings if the saveUserSettings function exists
+    if (typeof saveUserSettings === 'function') {
+      saveUserSettings();
+    } else {
+      // Otherwise, just show a success message as we've already saved to localStorage
+      console.log('saveUserSettings function not found, using localStorage only');
+    }
+  } catch (err) {
+    console.error('Error saving user settings:', err);
+  }
   
   // Show success message
   showNotification('Product categories saved successfully', 'success');

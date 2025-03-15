@@ -4589,8 +4589,12 @@ function exportProjectProductsToCSV(project) {
       );
       const totalPrice = convertedUnitPrice * product.quantity;
       
-      const unitPrice = formatPrice(convertedUnitPrice, outputCurrency, false);
-      const totalPriceFormatted = formatPrice(totalPrice, outputCurrency, false);
+      // Format prices for CSV export - without commas
+      const unitPrice = convertedUnitPrice.toFixed(2);
+      const totalPriceFormatted = totalPrice.toFixed(2);
+      
+      // Calculate category total - remove this as we don't want it in the export
+      // const categoryTotal = null;
       
       // Get installation time values
       const engineeringHours = productDetails.installationTime?.engineering || 0;
@@ -6506,10 +6510,28 @@ function getActiveProjectCategories() {
   const categoryElements = document.querySelectorAll('.project-product-category');
   categoryElements.forEach((el, index) => {
     const categoryId = el.dataset.categoryId;
+    
+    // Get the category name element and extract just the text, not including any child elements
     const categoryNameElement = el.querySelector('.category-name');
-    // Get text content and clean it up
-    let categoryName = categoryNameElement?.textContent || '';
-    // Remove any extra whitespace and newlines
+    
+    // Extract text properly
+    let categoryName = '';
+    if (categoryNameElement) {
+      // Simple text extraction skipping child elements 
+      const children = categoryNameElement.childNodes;
+      for (let i = 0; i < children.length; i++) {
+        if (children[i].nodeType === Node.TEXT_NODE) {
+          categoryName += children[i].textContent;
+        }
+      }
+    }
+    
+    // If we couldn't extract text or it's empty, try getting the full text content
+    if (!categoryName.trim()) {
+      categoryName = categoryNameElement?.textContent || '';
+    }
+    
+    // Clean up whitespace and newlines
     categoryName = categoryName.replace(/\s+/g, ' ').trim();
     
     if (categoryId && categoryName) {

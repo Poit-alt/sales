@@ -2949,6 +2949,17 @@ tr:hover {
   margin-bottom: 1rem;
 }
 
+.print-additional-options {
+  margin: 15px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.print-additional-options .button {
+  padding: 8px 16px;
+  font-weight: bold;
+}
+
 .print-view-option label {
   display: block;
   margin-bottom: 0.5rem;
@@ -3022,6 +3033,48 @@ tr:hover {
     top: 0;
     width: 100%;
   }
+  
+  /* Make sure all table elements are visible in print */
+  table, tr, td, th {
+    display: table !important;
+    display: table-row !important;
+    display: table-cell !important;
+    visibility: visible !important;
+  }
+  
+  /* Ensure all category header tables are visible */
+  .category-header-table,
+  .category-header-table tr,
+  .category-header-table td {
+    display: revert !important;
+    visibility: visible !important;
+  }
+  
+  /* Make the print-view-total visible */
+  #print-view-total,
+  #print-view-total * {
+    visibility: visible !important;
+  }
+  
+  /* Make sure hours summary is visible in print */
+  .hours-summary-container,
+  .hours-summary-container * {
+    visibility: visible !important;
+    display: block !important;
+  }
+  
+  .hours-summary-container table {
+    display: table !important;
+  }
+  
+  .hours-summary-container tr {
+    display: table-row !important;
+  }
+  
+  .hours-summary-container td,
+  .hours-summary-container th {
+    display: table-cell !important;
+  }
 }
 
 /* Print View Container Styles */
@@ -3066,11 +3119,34 @@ tr:hover {
 .print-category-header {
   background-color: #f5f5f5;
   border-left: 4px solid #4f46e5;
-  padding: 4pt 6pt;
+  padding: 5pt 8pt;
   margin-bottom: 5pt;
-  display: flex;
-  justify-content: space-between;
 }
+
+/* Header tables in print view */
+.category-header-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-category-total {
+  text-align: right;
+  font-weight: bold;
+}
+
+.print-hours {
+  font-weight: bold;
+  color: #444;
+}
+
+/* For screen display only */
+@media screen {
+  .print-category-total {
+    padding-right: 8px; 
+  }
+}
+
+/* Removed - no longer needed with new inline approach */
 
 .print-view-header {
   border-bottom: 1px solid #333;
@@ -3103,6 +3179,15 @@ tr:hover {
   margin-top: 10pt;
   font-size: 10pt;
   text-align: right;
+}
+
+/* Hours summary styles */
+.hours-summary-container {
+  margin-top: 20px;
+  page-break-inside: avoid;
+  border: 2px solid #000;
+  padding: 15px;
+  background-color: white;
 }
 }
 

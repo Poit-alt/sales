@@ -95,8 +95,62 @@ function findProductById(productId) {
   return window.allProducts.find(product => product && product.id === productId);
 }
 
+// Setup print view buttons
+function setupPrintViewButtons() {
+  const printNowBtn = document.getElementById('print-now-btn');
+  const exportPdfBtn = document.getElementById('export-pdf-btn');
+  const exportExcelBtn = document.getElementById('export-excel-btn');
+  const hoursReportBtn = document.getElementById('print-hours-report-btn');
+  
+  if (printNowBtn) {
+    printNowBtn.addEventListener('click', () => {
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        printContent();
+      }
+    });
+  }
+  
+  if (exportPdfBtn) {
+    exportPdfBtn.addEventListener('click', () => {
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        if (window.electron && window.electron.print && window.electron.print.printToPDF) {
+          printToPDF(currentProject.title);
+        } else {
+          showNotification('Use the "Save as PDF" option in the print dialog', 'info');
+          printContent();
+        }
+      }
+    });
+  }
+  
+  if (exportExcelBtn) {
+    exportExcelBtn.addEventListener('click', () => {
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        exportProjectProductsToCSV(currentProject);
+      }
+    });
+  }
+  
+  if (hoursReportBtn) {
+    hoursReportBtn.addEventListener('click', () => {
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        openHoursReportWindow(currentProject);
+      } else {
+        showNotification('No project data available for hours report', 'error');
+      }
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded');
+  
+  // Setup print view buttons
+  setupPrintViewButtons();
   
   // Ensure window.allProducts exists and is empty on startup
   if (typeof window.allProducts === 'undefined') {
@@ -4462,7 +4516,7 @@ function exportProjectProductsToCSV(project) {
   }
   
   // CSV header
-  let csvContent = `Category,Product ID,Product Name,Type,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency})\n`;
+  let csvContent = `Category,Product ID,Product Name,Type,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency}),Engineering Hours,Production Hours,Commissioning Hours,Total Hours\n`;
   
   // Get all categories
   const categories = {};
@@ -4498,8 +4552,20 @@ function exportProjectProductsToCSV(project) {
         return str.includes(',') ? `"${str}"` : str;
       };
       
+      // Get installation time values
+      const engineeringHours = productDetails.installationTime?.engineering || 0;
+      const productionHours = productDetails.installationTime?.production || 0;
+      const commissioningHours = productDetails.installationTime?.commissioning || 0;
+      const totalHours = engineeringHours + productionHours + commissioningHours;
+      
+      // Multiply hours by quantity
+      const totalEngineeringHours = engineeringHours * product.quantity;
+      const totalProductionHours = productionHours * product.quantity;
+      const totalCommissioningHours = commissioningHours * product.quantity;
+      const grandTotalHours = totalHours * product.quantity;
+      
       // Add CSV row
-      csvContent += `${escapeCsv(categoryName)},${escapeCsv(productDetails.id)},${escapeCsv(productDetails.name)},${product.isOption ? 'Optional' : 'Required'},${product.quantity},${unitPrice},${totalPriceFormatted}\n`;
+      csvContent += `${escapeCsv(categoryName)},${escapeCsv(productDetails.id)},${escapeCsv(productDetails.name)},${product.isOption ? 'Optional' : 'Required'},${product.quantity},${unitPrice},${totalPriceFormatted},${totalEngineeringHours},${totalProductionHours},${totalCommissioningHours},${grandTotalHours}\n`;
     }
   });
   
@@ -4531,6 +4597,551 @@ function formatPrice(price, currency = 'USD', includeCurrency = true) {
   });
   
   return formatter.format(price);
+}
+
+// Create a dedicated hours summary table for printing
+function createHoursSummaryTable(project, totalEngineeringTime, totalProductionTime, totalCommissioningTime) {
+  const totalInstallationTime = totalEngineeringTime + totalProductionTime + totalCommissioningTime;
+  
+  // If no hours, don't create the table
+  if (totalInstallationTime <= 0) return;
+  
+  // Get the print view container
+  const printViewContainer = document.querySelector('.print-view-container');
+  if (!printViewContainer) return;
+  
+  // Create a page break element before the hours summary
+  const pageBreak = document.createElement('div');
+  pageBreak.style.pageBreakBefore = 'always';
+  pageBreak.style.height = '1px';
+  pageBreak.style.width = '100%';
+  printViewContainer.appendChild(pageBreak);
+  
+  // Create a container for the hours summary on its own page
+  const hoursSummaryContainer = document.createElement('div');
+  hoursSummaryContainer.id = 'hours-summary-section';
+  hoursSummaryContainer.className = 'hours-summary-container print-section';
+  hoursSummaryContainer.style.marginTop = '50px';
+  hoursSummaryContainer.style.pageBreakInside = 'avoid';
+  hoursSummaryContainer.style.border = '2px solid #000';
+  hoursSummaryContainer.style.padding = '15px';
+  hoursSummaryContainer.style.backgroundColor = '#FFFFFF';
+  hoursSummaryContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+  
+  // Create a header
+  const summaryHeader = document.createElement('h2');
+  summaryHeader.style.borderBottom = '1px solid #000';
+  summaryHeader.style.paddingBottom = '8px';
+  summaryHeader.style.marginBottom = '15px';
+  summaryHeader.style.textAlign = 'center';
+  summaryHeader.style.fontSize = '14pt';
+  summaryHeader.innerHTML = 'INSTALLATION HOURS SUMMARY';
+  
+  hoursSummaryContainer.appendChild(summaryHeader);
+  
+  // Create a table for the hours summary
+  const summaryTable = document.createElement('table');
+  summaryTable.style.width = '100%';
+  summaryTable.style.borderCollapse = 'collapse';
+  summaryTable.style.margin = '0 auto';
+  summaryTable.border = '1';
+  summaryTable.setAttribute('cellpadding', '8');
+  summaryTable.setAttribute('cellspacing', '0');
+  
+  // Create the table header
+  const headerRow = document.createElement('tr');
+  headerRow.style.backgroundColor = '#f0f0f0';
+  headerRow.style.fontWeight = 'bold';
+  
+  // Create header cells
+  const headers = ['Category', 'Engineering Hours', 'Production Hours', 'Commissioning Hours', 'Total Hours'];
+  headers.forEach(headerText => {
+    const th = document.createElement('th');
+    th.textContent = headerText;
+    th.style.padding = '8px';
+    th.style.border = '1px solid #999';
+    headerRow.appendChild(th);
+  });
+  
+  summaryTable.appendChild(headerRow);
+  
+  // Create rows for each category
+  let categoryEngineeringHours = 0;
+  let categoryProductionHours = 0;
+  let categoryCommissioningHours = 0;
+  
+  // Process categories
+  if (project.productCategories && project.productCategories.length > 0) {
+    // Sort categories
+    const sortedCategories = [...project.productCategories].sort((a, b) => a.order - b.order);
+    
+    sortedCategories.forEach(category => {
+      // Get products for this category
+      const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+      
+      // Calculate hours
+      let engineeringHours = 0;
+      let productionHours = 0;
+      let commissioningHours = 0;
+      
+      categoryProducts.forEach(product => {
+        const productDetails = findProductById(product.productId);
+        if (productDetails && productDetails.installationTime) {
+          engineeringHours += (productDetails.installationTime.engineering || 0) * product.quantity;
+          productionHours += (productDetails.installationTime.production || 0) * product.quantity;
+          commissioningHours += (productDetails.installationTime.commissioning || 0) * product.quantity;
+        }
+      });
+      
+      // Skip categories with no hours
+      if (engineeringHours === 0 && productionHours === 0 && commissioningHours === 0) {
+        return;
+      }
+      
+      // Add category hours to total
+      categoryEngineeringHours += engineeringHours;
+      categoryProductionHours += productionHours;
+      categoryCommissioningHours += commissioningHours;
+      
+      // Create a row for this category
+      const categoryRow = document.createElement('tr');
+      
+      // Category name cell
+      const nameCell = document.createElement('td');
+      nameCell.textContent = category.name;
+      nameCell.style.padding = '8px';
+      nameCell.style.border = '1px solid #999';
+      nameCell.style.fontWeight = 'bold';
+      categoryRow.appendChild(nameCell);
+      
+      // Engineering hours
+      const engCell = document.createElement('td');
+      engCell.textContent = engineeringHours.toFixed(1);
+      engCell.style.padding = '8px';
+      engCell.style.border = '1px solid #999';
+      engCell.style.textAlign = 'center';
+      categoryRow.appendChild(engCell);
+      
+      // Production hours
+      const prodCell = document.createElement('td');
+      prodCell.textContent = productionHours.toFixed(1);
+      prodCell.style.padding = '8px';
+      prodCell.style.border = '1px solid #999';
+      prodCell.style.textAlign = 'center';
+      categoryRow.appendChild(prodCell);
+      
+      // Commissioning hours
+      const commCell = document.createElement('td');
+      commCell.textContent = commissioningHours.toFixed(1);
+      commCell.style.padding = '8px';
+      commCell.style.border = '1px solid #999';
+      commCell.style.textAlign = 'center';
+      categoryRow.appendChild(commCell);
+      
+      // Total hours
+      const totalCell = document.createElement('td');
+      const categoryTotal = engineeringHours + productionHours + commissioningHours;
+      totalCell.textContent = categoryTotal.toFixed(1);
+      totalCell.style.padding = '8px';
+      totalCell.style.border = '1px solid #999';
+      totalCell.style.textAlign = 'center';
+      totalCell.style.fontWeight = 'bold';
+      categoryRow.appendChild(totalCell);
+      
+      summaryTable.appendChild(categoryRow);
+    });
+  }
+  
+  // Add uncategorized products row if they have hours
+  const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
+  
+  if (uncategorizedProducts.length > 0) {
+    // Calculate hours
+    let uncategorizedEngHours = 0;
+    let uncategorizedProdHours = 0;
+    let uncategorizedCommHours = 0;
+    
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails && productDetails.installationTime) {
+        uncategorizedEngHours += (productDetails.installationTime.engineering || 0) * product.quantity;
+        uncategorizedProdHours += (productDetails.installationTime.production || 0) * product.quantity;
+        uncategorizedCommHours += (productDetails.installationTime.commissioning || 0) * product.quantity;
+      }
+    });
+    
+    // Add to category totals
+    categoryEngineeringHours += uncategorizedEngHours;
+    categoryProductionHours += uncategorizedProdHours;
+    categoryCommissioningHours += uncategorizedCommHours;
+    
+    // Only add row if there are hours
+    if (uncategorizedEngHours > 0 || uncategorizedProdHours > 0 || uncategorizedCommHours > 0) {
+      // Create a row for uncategorized
+      const uncatRow = document.createElement('tr');
+      
+      // Category name cell
+      const nameCell = document.createElement('td');
+      nameCell.textContent = 'Uncategorized Products';
+      nameCell.style.padding = '8px';
+      nameCell.style.border = '1px solid #999';
+      nameCell.style.fontWeight = 'bold';
+      uncatRow.appendChild(nameCell);
+      
+      // Engineering hours
+      const engCell = document.createElement('td');
+      engCell.textContent = uncategorizedEngHours.toFixed(1);
+      engCell.style.padding = '8px';
+      engCell.style.border = '1px solid #999';
+      engCell.style.textAlign = 'center';
+      uncatRow.appendChild(engCell);
+      
+      // Production hours
+      const prodCell = document.createElement('td');
+      prodCell.textContent = uncategorizedProdHours.toFixed(1);
+      prodCell.style.padding = '8px';
+      prodCell.style.border = '1px solid #999';
+      prodCell.style.textAlign = 'center';
+      uncatRow.appendChild(prodCell);
+      
+      // Commissioning hours
+      const commCell = document.createElement('td');
+      commCell.textContent = uncategorizedCommHours.toFixed(1);
+      commCell.style.padding = '8px';
+      commCell.style.border = '1px solid #999';
+      commCell.style.textAlign = 'center';
+      uncatRow.appendChild(commCell);
+      
+      // Total hours
+      const totalCell = document.createElement('td');
+      const uncatTotal = uncategorizedEngHours + uncategorizedProdHours + uncategorizedCommHours;
+      totalCell.textContent = uncatTotal.toFixed(1);
+      totalCell.style.padding = '8px';
+      totalCell.style.border = '1px solid #999';
+      totalCell.style.textAlign = 'center';
+      totalCell.style.fontWeight = 'bold';
+      uncatRow.appendChild(totalCell);
+      
+      summaryTable.appendChild(uncatRow);
+    }
+  }
+  
+  // Add a total row
+  const totalRow = document.createElement('tr');
+  totalRow.style.backgroundColor = '#f0f0f0';
+  totalRow.style.fontWeight = 'bold';
+  
+  // Project total cell
+  const totalLabelCell = document.createElement('td');
+  totalLabelCell.textContent = 'PROJECT TOTAL:';
+  totalLabelCell.style.padding = '8px';
+  totalLabelCell.style.border = '1px solid #999';
+  totalRow.appendChild(totalLabelCell);
+  
+  // Engineering total
+  const engTotalCell = document.createElement('td');
+  engTotalCell.textContent = totalEngineeringTime.toFixed(1);
+  engTotalCell.style.padding = '8px';
+  engTotalCell.style.border = '1px solid #999';
+  engTotalCell.style.textAlign = 'center';
+  totalRow.appendChild(engTotalCell);
+  
+  // Production total
+  const prodTotalCell = document.createElement('td');
+  prodTotalCell.textContent = totalProductionTime.toFixed(1);
+  prodTotalCell.style.padding = '8px';
+  prodTotalCell.style.border = '1px solid #999';
+  prodTotalCell.style.textAlign = 'center';
+  totalRow.appendChild(prodTotalCell);
+  
+  // Commissioning total
+  const commTotalCell = document.createElement('td');
+  commTotalCell.textContent = totalCommissioningTime.toFixed(1);
+  commTotalCell.style.padding = '8px';
+  commTotalCell.style.border = '1px solid #999';
+  commTotalCell.style.textAlign = 'center';
+  totalRow.appendChild(commTotalCell);
+  
+  // Grand total
+  const grandTotalCell = document.createElement('td');
+  grandTotalCell.textContent = totalInstallationTime.toFixed(1);
+  grandTotalCell.style.padding = '8px';
+  grandTotalCell.style.border = '1px solid #999';
+  grandTotalCell.style.textAlign = 'center';
+  totalRow.appendChild(grandTotalCell);
+  
+  summaryTable.appendChild(totalRow);
+  
+  // Add the table to the container
+  hoursSummaryContainer.appendChild(summaryTable);
+  
+  // Add a note about the hours
+  const hoursNote = document.createElement('div');
+  hoursNote.style.marginTop = '10px';
+  hoursNote.style.fontSize = '9pt';
+  hoursNote.style.fontStyle = 'italic';
+  hoursNote.style.textAlign = 'right';
+  hoursNote.innerHTML = '*Hours are calculated based on the installation time required for each product.';
+  
+  hoursSummaryContainer.appendChild(hoursNote);
+  
+  // Add the hours summary container to the print view container
+  printViewContainer.appendChild(hoursSummaryContainer);
+}
+
+// Open a dedicated hours report window
+function openHoursReportWindow(project) {
+  // Calculate total hours for the project
+  let totalEngineeringTime = 0;
+  let totalProductionTime = 0;
+  let totalCommissioningTime = 0;
+  
+  // Get hours from all products
+  (project.products || []).forEach(product => {
+    const productDetails = findProductById(product.productId);
+    if (productDetails && productDetails.installationTime) {
+      totalEngineeringTime += (productDetails.installationTime.engineering || 0) * product.quantity;
+      totalProductionTime += (productDetails.installationTime.production || 0) * product.quantity;
+      totalCommissioningTime += (productDetails.installationTime.commissioning || 0) * product.quantity;
+    }
+  });
+  
+  const totalInstallationTime = totalEngineeringTime + totalProductionTime + totalCommissioningTime;
+  
+  // If no hours, show notification and return
+  if (totalInstallationTime <= 0) {
+    showNotification('No installation hours found for this project', 'warning');
+    return;
+  }
+  
+  // Generate the hours report table HTML
+  let hoursSummaryHTML = '';
+  
+  // Start with a header
+  hoursSummaryHTML += `
+    <div class="print-view-header">
+      <h2>${project.title} - Installation Hours Summary</h2>
+      <div class="print-view-meta">
+        <div><strong>Client:</strong> ${project.client || 'N/A'}</div>
+        <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
+      </div>
+    </div>
+    
+    <p style="margin-bottom: 20px;">This report provides a breakdown of the installation hours required for this project by category.</p>
+  `;
+  
+  // Create the hours summary table
+  hoursSummaryHTML += `
+    <table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+      <thead style="background-color:#f0f0f0; font-weight:bold;">
+        <tr>
+          <th style="text-align:left; width:40%;">Category</th>
+          <th style="text-align:center; width:15%;">Engineering</th>
+          <th style="text-align:center; width:15%;">Production</th>
+          <th style="text-align:center; width:15%;">Commissioning</th>
+          <th style="text-align:center; width:15%;">Total Hours</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  // Add rows for each category
+  let categoryEngineeringHours = 0;
+  let categoryProductionHours = 0;
+  let categoryCommissioningHours = 0;
+  
+  // Process categories
+  if (project.productCategories && project.productCategories.length > 0) {
+    // Sort categories
+    const sortedCategories = [...project.productCategories].sort((a, b) => a.order - b.order);
+    
+    sortedCategories.forEach(category => {
+      // Get products for this category
+      const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+      
+      // Calculate hours
+      let engineeringHours = 0;
+      let productionHours = 0;
+      let commissioningHours = 0;
+      
+      categoryProducts.forEach(product => {
+        const productDetails = findProductById(product.productId);
+        if (productDetails && productDetails.installationTime) {
+          engineeringHours += (productDetails.installationTime.engineering || 0) * product.quantity;
+          productionHours += (productDetails.installationTime.production || 0) * product.quantity;
+          commissioningHours += (productDetails.installationTime.commissioning || 0) * product.quantity;
+        }
+      });
+      
+      // Skip categories with no hours
+      if (engineeringHours === 0 && productionHours === 0 && commissioningHours === 0) {
+        return;
+      }
+      
+      // Add to totals
+      categoryEngineeringHours += engineeringHours;
+      categoryProductionHours += productionHours;
+      categoryCommissioningHours += commissioningHours;
+      
+      // Add row for this category
+      const categoryTotal = engineeringHours + productionHours + commissioningHours;
+      hoursSummaryHTML += `
+        <tr>
+          <td style="font-weight:bold; text-align:left;">${category.name}</td>
+          <td style="text-align:center;">${engineeringHours.toFixed(1)}</td>
+          <td style="text-align:center;">${productionHours.toFixed(1)}</td>
+          <td style="text-align:center;">${commissioningHours.toFixed(1)}</td>
+          <td style="font-weight:bold; text-align:center;">${categoryTotal.toFixed(1)}</td>
+        </tr>
+      `;
+    });
+  }
+  
+  // Add uncategorized products row if they have hours
+  const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
+  
+  if (uncategorizedProducts.length > 0) {
+    // Calculate hours
+    let uncategorizedEngHours = 0;
+    let uncategorizedProdHours = 0;
+    let uncategorizedCommHours = 0;
+    
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails && productDetails.installationTime) {
+        uncategorizedEngHours += (productDetails.installationTime.engineering || 0) * product.quantity;
+        uncategorizedProdHours += (productDetails.installationTime.production || 0) * product.quantity;
+        uncategorizedCommHours += (productDetails.installationTime.commissioning || 0) * product.quantity;
+      }
+    });
+    
+    // Add to totals
+    categoryEngineeringHours += uncategorizedEngHours;
+    categoryProductionHours += uncategorizedProdHours;
+    categoryCommissioningHours += uncategorizedCommHours;
+    
+    // Only add row if there are hours
+    if (uncategorizedEngHours > 0 || uncategorizedProdHours > 0 || uncategorizedCommHours > 0) {
+      const uncatTotal = uncategorizedEngHours + uncategorizedProdHours + uncategorizedCommHours;
+      hoursSummaryHTML += `
+        <tr>
+          <td style="font-weight:bold; text-align:left;">Uncategorized Products</td>
+          <td style="text-align:center;">${uncategorizedEngHours.toFixed(1)}</td>
+          <td style="text-align:center;">${uncategorizedProdHours.toFixed(1)}</td>
+          <td style="text-align:center;">${uncategorizedCommHours.toFixed(1)}</td>
+          <td style="font-weight:bold; text-align:center;">${uncatTotal.toFixed(1)}</td>
+        </tr>
+      `;
+    }
+  }
+  
+  // Add total row
+  hoursSummaryHTML += `
+    <tr style="background-color:#f0f0f0; font-weight:bold;">
+      <td style="text-align:left;">PROJECT TOTAL</td>
+      <td style="text-align:center;">${categoryEngineeringHours.toFixed(1)}</td>
+      <td style="text-align:center;">${categoryProductionHours.toFixed(1)}</td>
+      <td style="text-align:center;">${categoryCommissioningHours.toFixed(1)}</td>
+      <td style="text-align:center;">${totalInstallationTime.toFixed(1)}</td>
+    </tr>
+  `;
+  
+  // Close the table and add a note
+  hoursSummaryHTML += `
+      </tbody>
+    </table>
+    
+    <p style="font-style:italic; font-size:9pt; text-align:right; margin-top:10px;">
+      *Hours are calculated based on the installation time required for each product.
+    </p>
+  `;
+  
+  // Create a full HTML document for printing
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${project.title} - Installation Hours Report</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0.5in;
+          font-size: 10pt;
+          line-height: 1.3;
+          color: black;
+        }
+        
+        .print-view-header {
+          display: flex;
+          justify-content: space-between;
+          border-bottom: 1px solid #333;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+        
+        .print-view-header h2 {
+          font-size: 16pt;
+          margin: 0;
+        }
+        
+        .print-view-meta {
+          font-size: 10pt;
+          line-height: 1.4;
+          text-align: right;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+        }
+        
+        th, td {
+          border: 1px solid #999;
+          padding: 8px;
+        }
+        
+        th {
+          background-color: #f0f0f0;
+        }
+        
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      </style>
+    </head>
+    <body id="hours-report-frame">
+      ${hoursSummaryHTML}
+    </body>
+    </html>
+  `;
+  
+  // Open a new window with the hours report
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  if (printWindow) {
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    // Wait for resources to load then print
+    printWindow.onload = function() {
+      setTimeout(() => {
+        printWindow.print();
+        // Close the window after printing (or if print is canceled)
+        printWindow.onafterprint = function() {
+          printWindow.close();
+        };
+      }, 500);
+    };
+  } else {
+    showNotification('Unable to open print window. Please check your pop-up blocker settings.', 'error');
+  }
 }
 
 // Open a new window with the print-friendly content
@@ -4591,6 +5202,21 @@ function openPrintWindow(project) {
               display: flex;
               justify-content: space-between;
               font-weight: bold;
+              flex-wrap: wrap;
+            }
+            .print-category-name {
+              flex: 1 1 100%;
+              margin-bottom: 3pt;
+            }
+            .print-category-hours {
+              flex: 1 1 60%;
+              font-size: 8pt;
+              color: #444;
+              text-align: left;
+            }
+            .print-category-total {
+              flex: 1 1 40%;
+              text-align: right;
             }
             .print-product-table {
               width: 100%;
@@ -4618,6 +5244,17 @@ function openPrintWindow(project) {
               border-top: 1px solid #333;
               padding-top: 5pt;
               margin-top: 10pt;
+              font-size: 10pt;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+            }
+            .print-view-summary-hours {
+              font-size: 9pt;
+              text-align: left;
+              line-height: 1.4;
+            }
+            .print-view-summary-value {
               font-size: 10pt;
               text-align: right;
               font-weight: bold;
@@ -4766,6 +5403,17 @@ function openPrintWindowFallback(project) {
           padding-top: 5pt;
           margin-top: 10pt;
           font-size: 10pt;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+        }
+        .print-view-summary-hours {
+          font-size: 9pt;
+          text-align: left;
+          line-height: 1.4;
+        }
+        .print-view-summary-value {
+          font-size: 10pt;
           text-align: right;
           font-weight: bold;
         }
@@ -4899,9 +5547,13 @@ function generateProductPrintContent(project) {
   // Categories section
   content += `<div id="print-view-categories">`;
   
-  // Calculate total value for all products, with currency conversion
+  // Calculate total value and hours for all products, with currency conversion
   // Exclude optional products from total
   let totalValue = 0;
+  let totalEngHours = 0;
+  let totalProdHours = 0;
+  let totalCommHours = 0;
+  
   (project.products || []).forEach(product => {
     // Skip optional products in the total
     if (product.isOption) return;
@@ -4915,6 +5567,23 @@ function generateProductPrintContent(project) {
         outputCurrency
       );
       totalValue += convertedUnitPrice * product.quantity;
+      
+      // Add hours
+      totalEngHours += (productDetails.installationTime?.engineering || 0) * product.quantity;
+      totalProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
+      totalCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
+      
+      // Add hours from bundled items
+      if (productDetails.isBundle && productDetails.bundleItems && productDetails.bundleItems.length > 0) {
+        productDetails.bundleItems.forEach(bundleItem => {
+          const bundledProduct = findProductById(bundleItem.productId);
+          if (bundledProduct) {
+            totalEngHours += (bundledProduct.installationTime?.engineering || 0) * bundleItem.quantity * product.quantity;
+            totalProdHours += (bundledProduct.installationTime?.production || 0) * bundleItem.quantity * product.quantity;
+            totalCommHours += (bundledProduct.installationTime?.commissioning || 0) * bundleItem.quantity * product.quantity;
+          }
+        });
+      }
     }
   });
   
@@ -4934,6 +5603,10 @@ function generateProductPrintContent(project) {
       // Calculate category total with currency conversion
       // Exclude optional products from total
       let categoryTotal = 0;
+      let categoryEngHours = 0;
+      let categoryProdHours = 0;
+      let categoryCommHours = 0;
+      
       categoryProducts.forEach(product => {
         // Skip optional products in the total
         if (product.isOption) return;
@@ -4947,6 +5620,23 @@ function generateProductPrintContent(project) {
             outputCurrency
           );
           categoryTotal += convertedUnitPrice * product.quantity;
+          
+          // Add hours
+          categoryEngHours += (productDetails.installationTime?.engineering || 0) * product.quantity;
+          categoryProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
+          categoryCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
+          
+          // Add hours from bundled items
+          if (productDetails.isBundle && productDetails.bundleItems && productDetails.bundleItems.length > 0) {
+            productDetails.bundleItems.forEach(bundleItem => {
+              const bundledProduct = findProductById(bundleItem.productId);
+              if (bundledProduct) {
+                categoryEngHours += (bundledProduct.installationTime?.engineering || 0) * bundleItem.quantity * product.quantity;
+                categoryProdHours += (bundledProduct.installationTime?.production || 0) * bundleItem.quantity * product.quantity;
+                categoryCommHours += (bundledProduct.installationTime?.commissioning || 0) * bundleItem.quantity * product.quantity;
+              }
+            });
+          }
         }
       });
       
@@ -4955,6 +5645,11 @@ function generateProductPrintContent(project) {
         <div class="print-category">
           <div class="print-category-header">
             <div class="print-category-name">${category.name}</div>
+            <div class="print-category-hours">
+              Engineering: ${categoryEngHours} hrs | 
+              Production: ${categoryProdHours} hrs | 
+              Commissioning: ${categoryCommHours} hrs
+            </div>
             <div class="print-category-total">${formatPrice(categoryTotal, outputCurrency)}</div>
           </div>
           
@@ -4962,10 +5657,13 @@ function generateProductPrintContent(project) {
             <thead>
               <tr>
                 <th style="width:15%">ID</th>
-                <th style="width:40%">Product</th>
+                <th style="width:25%">Product</th>
                 <th style="width:10%">Qty</th>
-                <th style="width:15%">Unit (${outputCurrency})</th>
-                <th style="width:20%">Total (${outputCurrency})</th>
+                <th style="width:10%">Eng. Hrs</th>
+                <th style="width:10%">Prod. Hrs</th>
+                <th style="width:10%">Comm. Hrs</th>
+                <th style="width:10%">Unit (${outputCurrency})</th>
+                <th style="width:10%">Total (${outputCurrency})</th>
               </tr>
             </thead>
             <tbody>
@@ -4986,12 +5684,25 @@ function generateProductPrintContent(project) {
           // Check if this is an optional product
           const rowClass = product.isOption ? 'optional-product' : '';
           
+          // Get installation time values
+          const engineeringHours = productDetails.installationTime?.engineering || 0;
+          const productionHours = productDetails.installationTime?.production || 0;
+          const commissioningHours = productDetails.installationTime?.commissioning || 0;
+          
+          // Calculate total hours
+          const totalEngHours = engineeringHours * product.quantity;
+          const totalProdHours = productionHours * product.quantity;
+          const totalCommHours = commissioningHours * product.quantity;
+          
           // Create the main product row
           content += `
             <tr class="${rowClass}">
               <td>${productDetails.id}</td>
               <td>${productDetails.name}${product.isOption ? ' <span style="color:#666;font-size:80%;font-style:italic">(Optional)</span>' : ''}</td>
               <td>${product.quantity}</td>
+              <td>${totalEngHours}</td>
+              <td>${totalProdHours}</td>
+              <td>${totalCommHours}</td>
               <td>${formatPrice(convertedUnitPrice, outputCurrency)}</td>
               <td>${formatPrice(totalPrice, outputCurrency)}</td>
             </tr>
@@ -5009,12 +5720,25 @@ function generateProductPrintContent(project) {
                   outputCurrency
                 );
                 
+                // Get bundled item installation time values
+                const bundledEngHours = bundledProduct.installationTime?.engineering || 0;
+                const bundledProdHours = bundledProduct.installationTime?.production || 0;
+                const bundledCommHours = bundledProduct.installationTime?.commissioning || 0;
+                
+                // Calculate total bundled item hours
+                const totalBundledEngHours = bundledEngHours * bundleItem.quantity * product.quantity;
+                const totalBundledProdHours = bundledProdHours * bundleItem.quantity * product.quantity;
+                const totalBundledCommHours = bundledCommHours * bundleItem.quantity * product.quantity;
+                
                 // Add bundle item row - with price shown as note only
                 content += `
                   <tr class="bundle-subitem">
                     <td></td>
                     <td style="padding-left: 20px;">↳ ${bundledProduct.name}</td>
                     <td>${bundleItem.quantity * product.quantity}</td>
+                    <td>${totalBundledEngHours}</td>
+                    <td>${totalBundledProdHours}</td>
+                    <td>${totalBundledCommHours}</td>
                     <td colspan="2" style="font-style: italic; color: #666;">Note: ${formatPrice(bundledItemUnitPrice, outputCurrency)} each</td>
                   </tr>
                 `;
@@ -5037,6 +5761,10 @@ function generateProductPrintContent(project) {
   if (uncategorizedProducts.length > 0) {
     // Calculate uncategorized total with currency conversion
     let uncategorizedTotal = 0;
+    let uncategorizedEngHours = 0;
+    let uncategorizedProdHours = 0;
+    let uncategorizedCommHours = 0;
+    
     uncategorizedProducts.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
@@ -5047,6 +5775,23 @@ function generateProductPrintContent(project) {
           outputCurrency
         );
         uncategorizedTotal += convertedUnitPrice * product.quantity;
+        
+        // Add hours
+        uncategorizedEngHours += (productDetails.installationTime?.engineering || 0) * product.quantity;
+        uncategorizedProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
+        uncategorizedCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
+        
+        // Add hours from bundled items
+        if (productDetails.isBundle && productDetails.bundleItems && productDetails.bundleItems.length > 0) {
+          productDetails.bundleItems.forEach(bundleItem => {
+            const bundledProduct = findProductById(bundleItem.productId);
+            if (bundledProduct) {
+              uncategorizedEngHours += (bundledProduct.installationTime?.engineering || 0) * bundleItem.quantity * product.quantity;
+              uncategorizedProdHours += (bundledProduct.installationTime?.production || 0) * bundleItem.quantity * product.quantity;
+              uncategorizedCommHours += (bundledProduct.installationTime?.commissioning || 0) * bundleItem.quantity * product.quantity;
+            }
+          });
+        }
       }
     });
     
@@ -5055,6 +5800,11 @@ function generateProductPrintContent(project) {
       <div class="print-category">
         <div class="print-category-header">
           <div class="print-category-name">Uncategorized Products</div>
+          <div class="print-category-hours">
+            Engineering: ${uncategorizedEngHours} hrs | 
+            Production: ${uncategorizedProdHours} hrs | 
+            Commissioning: ${uncategorizedCommHours} hrs
+          </div>
           <div class="print-category-total">${formatPrice(uncategorizedTotal, outputCurrency)}</div>
         </div>
         
@@ -5062,10 +5812,13 @@ function generateProductPrintContent(project) {
           <thead>
             <tr>
               <th style="width:15%">ID</th>
-              <th style="width:40%">Product</th>
+              <th style="width:25%">Product</th>
               <th style="width:10%">Qty</th>
-              <th style="width:15%">Unit (${outputCurrency})</th>
-              <th style="width:20%">Total (${outputCurrency})</th>
+              <th style="width:10%">Eng. Hrs</th>
+              <th style="width:10%">Prod. Hrs</th>
+              <th style="width:10%">Comm. Hrs</th>
+              <th style="width:10%">Unit (${outputCurrency})</th>
+              <th style="width:10%">Total (${outputCurrency})</th>
             </tr>
           </thead>
           <tbody>
@@ -5083,12 +5836,25 @@ function generateProductPrintContent(project) {
         );
         const totalPrice = convertedUnitPrice * product.quantity;
         
+        // Get installation time values
+        const engineeringHours = productDetails.installationTime?.engineering || 0;
+        const productionHours = productDetails.installationTime?.production || 0;
+        const commissioningHours = productDetails.installationTime?.commissioning || 0;
+        
+        // Calculate total hours
+        const totalEngHours = engineeringHours * product.quantity;
+        const totalProdHours = productionHours * product.quantity;
+        const totalCommHours = commissioningHours * product.quantity;
+        
         // Create the main product row
         content += `
           <tr>
             <td>${productDetails.id}</td>
             <td>${productDetails.name}</td>
             <td>${product.quantity}</td>
+            <td>${totalEngHours}</td>
+            <td>${totalProdHours}</td>
+            <td>${totalCommHours}</td>
             <td>${formatPrice(convertedUnitPrice, outputCurrency)}</td>
             <td>${formatPrice(totalPrice, outputCurrency)}</td>
           </tr>
@@ -5106,12 +5872,25 @@ function generateProductPrintContent(project) {
                 outputCurrency
               );
               
+              // Get bundled item installation time values
+              const bundledEngHours = bundledProduct.installationTime?.engineering || 0;
+              const bundledProdHours = bundledProduct.installationTime?.production || 0;
+              const bundledCommHours = bundledProduct.installationTime?.commissioning || 0;
+              
+              // Calculate total bundled item hours
+              const totalBundledEngHours = bundledEngHours * bundleItem.quantity * product.quantity;
+              const totalBundledProdHours = bundledProdHours * bundleItem.quantity * product.quantity;
+              const totalBundledCommHours = bundledCommHours * bundleItem.quantity * product.quantity;
+              
               // Add bundle item row - with price shown as note only
               content += `
                 <tr class="bundle-subitem">
                   <td></td>
                   <td style="padding-left: 20px;">↳ ${bundledProduct.name}</td>
                   <td>${bundleItem.quantity * product.quantity}</td>
+                  <td>${totalBundledEngHours}</td>
+                  <td>${totalBundledProdHours}</td>
+                  <td>${totalBundledCommHours}</td>
                   <td colspan="2" style="font-style: italic; color: #666;">Note: ${formatPrice(bundledItemUnitPrice, outputCurrency)} each</td>
                 </tr>
               `;
@@ -5134,7 +5913,15 @@ function generateProductPrintContent(project) {
   // Add summary footer
   content += `
     <div class="print-view-summary">
-      Total Value: ${formatPrice(totalValue, outputCurrency)}
+      <div class="print-view-summary-hours">
+        <div><strong>Engineering:</strong> ${totalEngHours} hrs</div>
+        <div><strong>Production:</strong> ${totalProdHours} hrs</div>
+        <div><strong>Commissioning:</strong> ${totalCommHours} hrs</div>
+        <div><strong>Total Hours:</strong> ${totalEngHours + totalProdHours + totalCommHours} hrs</div>
+      </div>
+      <div class="print-view-summary-value">
+        Total Value: ${formatPrice(totalValue, outputCurrency)}
+      </div>
     </div>
   `;
   
@@ -5195,18 +5982,51 @@ function generateProductPrintView(project) {
   
   const totalInstallationTime = totalEngineeringTime + totalProductionTime + totalCommissioningTime;
   
-  // Set total in summary section using project currency
+  // Create a table for the project total that will display properly in print
   const totalElement = document.getElementById('print-view-total');
-  totalElement.innerHTML = `
-    <div>Total Value: ${formatMoney(totalValue, projectCurrency)}</div>
-    ${totalInstallationTime > 0 ? `
-    <div style="margin-top:10px;font-size:90%;">
-      <strong>Total Installation Time:</strong> ${totalInstallationTime}h 
-      (Engineering: ${totalEngineeringTime}h, 
-      Production: ${totalProductionTime}h, 
-      Commissioning: ${totalCommissioningTime}h)
-    </div>` : ''}
-  `;
+  totalElement.innerHTML = '';
+  
+  const totalTable = document.createElement('table');
+  totalTable.style.width = '100%';
+  totalTable.style.borderCollapse = 'collapse';
+  totalTable.style.marginTop = '10px';
+  totalTable.style.borderTop = '2px solid #000';
+  totalTable.style.paddingTop = '8px';
+  
+  const totalRow = totalTable.insertRow();
+  
+  // Label cell
+  const labelCell = totalRow.insertCell();
+  labelCell.style.width = '40%';
+  labelCell.style.textAlign = 'left';
+  labelCell.style.fontWeight = 'bold';
+  labelCell.textContent = 'PROJECT TOTAL:';
+  
+  // Hours cell
+  const hoursCell = totalRow.insertCell();
+  hoursCell.style.width = '40%';
+  hoursCell.style.textAlign = 'right';
+  
+  if (totalInstallationTime > 0) {
+    hoursCell.innerHTML = `
+      <span style="font-weight:bold;">Hours:</span> 
+      E:${totalEngineeringTime} P:${totalProductionTime} C:${totalCommissioningTime} 
+      <span style="font-weight:bold;">(${totalInstallationTime})</span>
+    `;
+  } else {
+    hoursCell.innerHTML = '&nbsp;';
+  }
+  
+  // Money cell
+  const moneyCell = totalRow.insertCell();
+  moneyCell.style.width = '20%';
+  moneyCell.style.textAlign = 'right';
+  moneyCell.style.fontWeight = 'bold';
+  moneyCell.textContent = formatMoney(totalValue, projectCurrency);
+  
+  totalElement.appendChild(totalTable);
+  
+  // Instead of trying to add to the existing print view, we'll create a separate button for hours report
   
   // Process categories
   if (project.productCategories && project.productCategories.length > 0) {
@@ -5223,6 +6043,10 @@ function generateProductPrintView(project) {
       
       // Calculate category total, converting to project currency
       let categoryTotal = 0;
+      let categoryEngineeringTime = 0;
+      let categoryProductionTime = 0;
+      let categoryCommissioningTime = 0;
+      
       categoryProducts.forEach(product => {
         const productDetails = findProductById(product.productId);
         if (productDetails) {
@@ -5234,8 +6058,17 @@ function generateProductPrintView(project) {
             projectCurrency
           );
           categoryTotal += convertedPrice * product.quantity;
+          
+          // Add installation time (use product's own time values, even for bundles)
+          if (productDetails.installationTime) {
+            categoryEngineeringTime += (productDetails.installationTime.engineering || 0) * product.quantity;
+            categoryProductionTime += (productDetails.installationTime.production || 0) * product.quantity;
+            categoryCommissioningTime += (productDetails.installationTime.commissioning || 0) * product.quantity;
+          }
         }
       });
+      
+      const categoryTotalTime = categoryEngineeringTime + categoryProductionTime + categoryCommissioningTime;
       
       // Create category section
       const categorySection = document.createElement('div');
@@ -5244,10 +6077,47 @@ function generateProductPrintView(project) {
       // Create category header
       const categoryHeader = document.createElement('div');
       categoryHeader.className = 'print-category-header';
-      categoryHeader.innerHTML = `
-        <div class="print-category-name">${category.name}</div>
-        <div class="print-category-total">${formatMoney(categoryTotal)}</div>
-      `;
+      
+      // Create header as a table to ensure consistent display in print
+      const headerTable = document.createElement('table');
+      headerTable.className = 'category-header-table';
+      headerTable.style.width = '100%';
+      headerTable.style.borderCollapse = 'collapse';
+      
+      const headerRow = headerTable.insertRow();
+      
+      // Category name cell
+      const nameCell = headerRow.insertCell();
+      nameCell.style.width = '40%';
+      nameCell.style.textAlign = 'left';
+      nameCell.style.fontWeight = 'bold';
+      nameCell.textContent = category.name;
+      
+      // Hours cell
+      const hoursCell = headerRow.insertCell();
+      hoursCell.style.width = '40%';
+      hoursCell.style.textAlign = 'right';
+      
+      if (categoryTotalTime > 0) {
+        hoursCell.innerHTML = `
+          <span style="font-weight:bold;">Hours:</span> 
+          E:${categoryEngineeringTime} P:${categoryProductionTime} C:${categoryCommissioningTime} 
+          <span style="font-weight:bold;">(${categoryTotalTime})</span>
+        `;
+      } else {
+        hoursCell.innerHTML = '&nbsp;';
+      }
+      
+      // Money cell
+      const moneyCell = headerRow.insertCell();
+      moneyCell.style.width = '20%';
+      moneyCell.style.textAlign = 'right';
+      moneyCell.style.fontWeight = 'bold';
+      moneyCell.textContent = formatMoney(categoryTotal);
+      
+      // Clear existing content and append the table
+      categoryHeader.innerHTML = '';
+      categoryHeader.appendChild(headerTable);
       categorySection.appendChild(categoryHeader);
       
       // Create products table
@@ -5322,14 +6192,27 @@ function generateProductPrintView(project) {
   // Handle uncategorized products
   const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
   if (uncategorizedProducts.length > 0) {
-    // Calculate uncategorized total
+    // Calculate uncategorized total and hours
     let uncategorizedTotal = 0;
+    let uncategorizedEngineeringTime = 0;
+    let uncategorizedProductionTime = 0;
+    let uncategorizedCommissioningTime = 0;
+    
     uncategorizedProducts.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
         uncategorizedTotal += productDetails.price * product.quantity;
+        
+        // Add installation time (use product's own time values, even for bundles)
+        if (productDetails.installationTime) {
+          uncategorizedEngineeringTime += (productDetails.installationTime.engineering || 0) * product.quantity;
+          uncategorizedProductionTime += (productDetails.installationTime.production || 0) * product.quantity;
+          uncategorizedCommissioningTime += (productDetails.installationTime.commissioning || 0) * product.quantity;
+        }
       }
     });
+    
+    const uncategorizedTotalTime = uncategorizedEngineeringTime + uncategorizedProductionTime + uncategorizedCommissioningTime;
     
     // Create uncategorized section
     const uncategorizedSection = document.createElement('div');
@@ -5338,10 +6221,46 @@ function generateProductPrintView(project) {
     // Create category header
     const uncategorizedHeader = document.createElement('div');
     uncategorizedHeader.className = 'print-category-header';
-    uncategorizedHeader.innerHTML = `
-      <div class="print-category-name">Uncategorized Products</div>
-      <div class="print-category-total">${formatMoney(uncategorizedTotal)}</div>
-    `;
+    // Create header as a table to ensure consistent display in print
+    const headerTable = document.createElement('table');
+    headerTable.className = 'category-header-table';
+    headerTable.style.width = '100%';
+    headerTable.style.borderCollapse = 'collapse';
+    
+    const headerRow = headerTable.insertRow();
+    
+    // Category name cell
+    const nameCell = headerRow.insertCell();
+    nameCell.style.width = '40%';
+    nameCell.style.textAlign = 'left';
+    nameCell.style.fontWeight = 'bold';
+    nameCell.textContent = 'Uncategorized Products';
+    
+    // Hours cell
+    const hoursCell = headerRow.insertCell();
+    hoursCell.style.width = '40%';
+    hoursCell.style.textAlign = 'right';
+    
+    if (uncategorizedTotalTime > 0) {
+      hoursCell.innerHTML = `
+        <span style="font-weight:bold;">Hours:</span> 
+        E:${uncategorizedEngineeringTime} P:${uncategorizedProductionTime} C:${uncategorizedCommissioningTime} 
+        <span style="font-weight:bold;">(${uncategorizedTotalTime})</span>
+      `;
+    } else {
+      hoursCell.innerHTML = '&nbsp;';
+    }
+    
+    // Money cell
+    const moneyCell = headerRow.insertCell();
+    moneyCell.style.width = '20%';
+    moneyCell.style.textAlign = 'right';
+    moneyCell.style.fontWeight = 'bold';
+    moneyCell.textContent = formatMoney(uncategorizedTotal);
+    
+    // Clear existing content and append the table
+    uncategorizedHeader.innerHTML = '';
+    uncategorizedHeader.appendChild(headerTable);
     uncategorizedSection.appendChild(uncategorizedHeader);
     
     // Create products table

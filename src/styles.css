@@ -1595,8 +1595,8 @@ tr:hover {
 
 .product-suggestions {
   display: none;
-  position: absolute;
-  width: 100%;
+  position: fixed;
+  width: fit-content;
   max-height: 250px;
   overflow-y: auto;
   background-color: var(--bg-secondary);

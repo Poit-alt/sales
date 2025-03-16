@@ -1,7 +1,7 @@
 {
   "name": "sales",
-  "version": "1.0.0",
-  "description": "Electron sales app with dark mode",
+  "version": "2.0.0",
+  "description": "Sales app for tracking projects",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -16,7 +16,7 @@
     "dashboard",
     "dark-mode"
   ],
-  "author": "",
+  "author": "Peter Nordal Bjørneseth",
   "license": "ISC",
   "devDependencies": {
     "electron": "^35.0.0",
@@ -28,7 +28,8 @@
   },
   "build": {
     "appId": "com.example.sales",
-    "productName": "Sales Dashboard",
+    "productName": "SalesVoyage",
+    "icon": "src/icon.png",
     "directories": {
       "output": "dist"
     },

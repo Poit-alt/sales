@@ -3847,7 +3847,7 @@ function captureInitialProjects() {
       client: '',
       description: '',
       tasks: [],
-      teamSize: 3,
+      teamSize: 0,
       budget: 5000,
       createdAt: new Date().toISOString(),
       createdBy: getCurrentUserName()
@@ -3925,20 +3925,10 @@ function addProjectCardToUI(project) {
       <div class="project-deadline">
         <i class="fa fa-calendar"></i> Due: ${formattedDate}
       </div>
-      <div class="project-team">
-        <div class="team-members">
-          <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-          <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-          ${project.teamSize > 2 ? `<span class="team-more">+${project.teamSize - 2}</span>` : ''}
-        </div>
-      </div>
     </div>
     <div class="project-stats">
       ${tasksCountHtml}
       ${productsCountHtml}
-      <div class="stat">
-        <i class="fa fa-comment"></i> 0
-      </div>
       <div class="stat">
         <i class="fa fa-paperclip"></i> 0
       </div>

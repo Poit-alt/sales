@@ -334,11 +334,18 @@ function setupIPC() {
     try {
       console.log('Save products request received');
       
-      // ALWAYS use the app's data directory first
-      const defaultSavePath = path.join(__dirname, '..', 'data', 'products.json');
-      let savePath = defaultSavePath;
+      // Use the user-selected database path if it exists
+      let savePath;
       
-      console.log('HARDCODED: Using app data directory for saving:', savePath);
+      if (app.databasePath) {
+        // Use the user-selected path for saving
+        savePath = path.join(app.databasePath, 'products.json');
+        console.log('Using user-selected database path for saving:', savePath);
+      } else {
+        // Fallback to the app's data directory if no user path is set
+        savePath = path.join(__dirname, '..', 'data', 'products.json');
+        console.log('No database path set, using app data directory for saving:', savePath);
+      }
       
       // Ensure the directory exists
       const saveDir = path.dirname(savePath);
@@ -620,21 +627,30 @@ function setupIPC() {
   ipcMain.handle('read-database-file', async (event, fileName, customPath) => {
     console.log(`Reading database file: ${fileName}`);
     
-    // If this is a projects.json file and we have a projects database path, use that
-    if (fileName === 'projects.json' && app.projectsDatabasePath && !customPath) {
-      console.log(`Using projectsDatabasePath for reading projects: ${app.projectsDatabasePath}`);
-      customPath = app.projectsDatabasePath;
-    } else if (customPath) {
-      console.log(`Using provided custom path: ${customPath}`);
-    } else {
-      console.log(`Using regular databasePath: ${app.databasePath}`);
+    // Special case for app settings - always load from app data directory
+    if (fileName === '__app_settings__.json') {
+      try {
+        const settingsPath = path.join(__dirname, '..', 'data', 'settings.json');
+        console.log(`Checking for app settings at: ${settingsPath}`);
+        
+        if (fs.existsSync(settingsPath)) {
+          const data = await fs.promises.readFile(settingsPath, 'utf8');
+          const stats = fs.statSync(settingsPath);
+          console.log(`Successfully read app settings from: ${settingsPath}`);
+          console.log(`File size: ${stats.size} bytes, Last modified: ${stats.mtime}`);
+          return { data: JSON.parse(data) };
+        } else {
+          console.log('App settings file not found');
+          return { error: 'App settings file not found' };
+        }
+      } catch (err) {
+        console.error('Error reading app settings:', err);
+        return { error: err.message };
+      }
     }
     
-    // Determine which path to use
-    const effectivePath = customPath || app.databasePath;
-    
-    // Check if we have a path to use
-    if (effectivePath) {
+    // Check if we have a user-selected path first for normal files
+    if (app.databasePath && app.databasePath !== path.join(__dirname, '..', 'data')) {
       try {
         const userPath = path.join(effectivePath, fileName);
         console.log(`Checking for ${fileName} in user-selected directory: ${userPath}`);
@@ -737,25 +753,29 @@ function setupIPC() {
     const { fileName, data, customPath } = params;
     console.log('Saving file:', fileName);
     
-    // Determine which path to use based on the file type
-    let effectivePath;
-    
-    if (fileName === 'projects.json' && app.projectsDatabasePath && !customPath) {
-      // For projects.json, use the projects database path if available
-      effectivePath = app.projectsDatabasePath;
-      console.log(`Using projectsDatabasePath for saving projects: ${effectivePath}`);
-    } else if (customPath) {
-      // If a custom path was explicitly provided, use that
-      effectivePath = customPath;
-      console.log(`Using provided custom path: ${effectivePath}`);
-    } else if (app.databasePath) {
-      // Otherwise use the regular database path
-      effectivePath = app.databasePath;
-      console.log(`Using regular databasePath: ${effectivePath}`);
+    // Special case for app settings - always save to app data directory
+    if (fileName === '__app_settings__.json') {
+      try {
+        // Always save app settings to the app's data directory
+        const settingsPath = path.join(__dirname, '..', 'data', 'settings.json');
+        console.log('Saving app settings to:', settingsPath);
+        
+        // Ensure data directory exists
+        const dataDir = path.dirname(settingsPath);
+        if (!fs.existsSync(dataDir)) {
+          await fs.promises.mkdir(dataDir, { recursive: true });
+        }
+        
+        await fs.promises.writeFile(settingsPath, JSON.stringify(data, null, 2), 'utf8');
+        return { success: true };
+      } catch (err) {
+        console.error('Error saving app settings:', err);
+        return { error: err.message };
+      }
     }
     
-    // Special case for saving to local data directory
-    if (fileName === 'products.json' && !effectivePath) {
+    // Special case for saving products to local data directory
+    if (fileName === 'products.json' && !app.databasePath) {
       try {
         // Try to save to the app's data directory
         const dataPath = path.join(__dirname, '..', 'data', 'products.json');

@@ -52,6 +52,61 @@
   box-sizing: border-box;
 }
 
+/* Notification styles */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  color: white;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.notification.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Drag and drop styles */
+.product-item {
+  cursor: grab;
+}
+
+.product-item.dragging {
+  cursor: grabbing;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 100;
+}
+
+.category-drop-zone.drag-over {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  border: 2px dashed var(--accent);
+  padding: 10px;
+}
+
+.notification.success {
+  background-color: var(--success);
+}
+
+.notification.error {
+  background-color: var(--danger);
+}
+
+.notification.warning {
+  background-color: var(--warning);
+}
+
+.notification.info {
+  background-color: var(--accent);
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-primary);
@@ -2894,6 +2949,17 @@ tr:hover {
   margin-bottom: 1rem;
 }
 
+.print-additional-options {
+  margin: 15px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.print-additional-options .button {
+  padding: 8px 16px;
+  font-weight: bold;
+}
+
 .print-view-option label {
   display: block;
   margin-bottom: 0.5rem;
@@ -2967,6 +3033,48 @@ tr:hover {
     top: 0;
     width: 100%;
   }
+  
+  /* Make sure all table elements are visible in print */
+  table, tr, td, th {
+    display: table !important;
+    display: table-row !important;
+    display: table-cell !important;
+    visibility: visible !important;
+  }
+  
+  /* Ensure all category header tables are visible */
+  .category-header-table,
+  .category-header-table tr,
+  .category-header-table td {
+    display: revert !important;
+    visibility: visible !important;
+  }
+  
+  /* Make the print-view-total visible */
+  #print-view-total,
+  #print-view-total * {
+    visibility: visible !important;
+  }
+  
+  /* Make sure hours summary is visible in print */
+  .hours-summary-container,
+  .hours-summary-container * {
+    visibility: visible !important;
+    display: block !important;
+  }
+  
+  .hours-summary-container table {
+    display: table !important;
+  }
+  
+  .hours-summary-container tr {
+    display: table-row !important;
+  }
+  
+  .hours-summary-container td,
+  .hours-summary-container th {
+    display: table-cell !important;
+  }
 }
 
 /* Print View Container Styles */
@@ -3002,14 +3110,43 @@ tr:hover {
   padding: 3pt 4pt;
 }
 
+.installation-time-row {
+  background-color: rgba(0, 0, 0, 0.03);
+  font-size: 0.9rem;
+  border-top: 1px dashed #e0e0e0;
+}
+
 .print-category-header {
   background-color: #f5f5f5;
   border-left: 4px solid #4f46e5;
-  padding: 4pt 6pt;
+  padding: 5pt 8pt;
   margin-bottom: 5pt;
-  display: flex;
-  justify-content: space-between;
 }
+
+/* Header tables in print view */
+.category-header-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-category-total {
+  text-align: right;
+  font-weight: bold;
+}
+
+.print-hours {
+  font-weight: bold;
+  color: #444;
+}
+
+/* For screen display only */
+@media screen {
+  .print-category-total {
+    padding-right: 8px; 
+  }
+}
+
+/* Removed - no longer needed with new inline approach */
 
 .print-view-header {
   border-bottom: 1px solid #333;
@@ -3042,6 +3179,15 @@ tr:hover {
   margin-top: 10pt;
   font-size: 10pt;
   text-align: right;
+}
+
+/* Hours summary styles */
+.hours-summary-container {
+  margin-top: 20px;
+  page-break-inside: avoid;
+  border: 2px solid #000;
+  padding: 15px;
+  background-color: white;
 }
 }
 

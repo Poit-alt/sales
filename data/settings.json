@@ -1,0 +1,22 @@
+{
+  "userName": "Peter",
+  "userRole": "admin",
+  "defaultCurrency": "NOK",
+  "categories": [
+    {
+      "id": "hardware",
+      "name": "Hardware",
+      "order": 0
+    },
+    {
+      "id": "software",
+      "name": "Software",
+      "order": 1
+    },
+    {
+      "id": "services",
+      "name": "Services",
+      "order": 2
+    }
+  ]
+}

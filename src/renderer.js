@@ -4,6 +4,86 @@
 window.allProducts = [];
 window.filteredProducts = [];
 
+// Function to show a notification message
+function showNotification(message, type = 'info') {
+  console.log(`Notification (${type}): ${message}`);
+  
+  // Create notification element if it doesn't exist
+  let notification = document.getElementById('notification');
+  if (!notification) {
+    notification = document.createElement('div');
+    notification.id = 'notification';
+    document.body.appendChild(notification);
+  }
+  
+  // Set the message and type
+  notification.textContent = message;
+  notification.className = `notification ${type}`;
+  
+  // Show the notification
+  notification.classList.add('show');
+  
+  // Hide after a delay
+  setTimeout(() => {
+    notification.classList.remove('show');
+  }, 3000);
+}
+
+// Modal input function to replace prompt()
+function showInputModal(title, message, defaultValue = '', callback) {
+  const inputModal = document.getElementById('input-modal');
+  const modalTitle = document.getElementById('input-modal-title');
+  const modalLabel = document.getElementById('input-modal-label');
+  const modalInput = document.getElementById('input-modal-value');
+  const confirmBtn = document.getElementById('input-modal-confirm');
+  const cancelBtn = document.getElementById('input-modal-cancel');
+  const closeBtn = inputModal.querySelector('.modal-close');
+  
+  // Set modal content
+  modalTitle.textContent = title || 'Enter Information';
+  modalLabel.textContent = message || 'Please enter a value:';
+  modalInput.value = defaultValue;
+  
+  // Show the modal
+  inputModal.classList.add('active');
+  modalInput.focus();
+  
+  // Handle confirm button
+  const handleConfirm = () => {
+    const value = modalInput.value.trim();
+    inputModal.classList.remove('active');
+    if (callback) callback(value);
+    cleanup();
+  };
+  
+  // Handle cancel/close
+  const handleCancel = () => {
+    inputModal.classList.remove('active');
+    if (callback) callback(null);
+    cleanup();
+  };
+  
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') handleConfirm();
+    if (e.key === 'Escape') handleCancel();
+  };
+  
+  // Add event listeners
+  confirmBtn.addEventListener('click', handleConfirm);
+  cancelBtn.addEventListener('click', handleCancel);
+  closeBtn.addEventListener('click', handleCancel);
+  modalInput.addEventListener('keydown', handleKeyPress);
+  
+  // Cleanup function to remove event listeners
+  function cleanup() {
+    confirmBtn.removeEventListener('click', handleConfirm);
+    cancelBtn.removeEventListener('click', handleCancel);
+    closeBtn.removeEventListener('click', handleCancel);
+    modalInput.removeEventListener('keydown', handleKeyPress);
+  }
+}
+
 // Find a product by its ID (global function)
 function findProductById(productId) {
   // Check if we have product data
@@ -15,8 +95,62 @@ function findProductById(productId) {
   return window.allProducts.find(product => product && product.id === productId);
 }
 
+// Setup print view buttons
+function setupPrintViewButtons() {
+  const printNowBtn = document.getElementById('print-now-btn');
+  const exportPdfBtn = document.getElementById('export-pdf-btn');
+  const exportExcelBtn = document.getElementById('export-excel-btn');
+  const hoursReportBtn = document.getElementById('print-hours-report-btn');
+  
+  if (printNowBtn) {
+    printNowBtn.addEventListener('click', () => {
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        printContent();
+      }
+    });
+  }
+  
+  if (exportPdfBtn) {
+    exportPdfBtn.addEventListener('click', () => {
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        if (window.electron && window.electron.print && window.electron.print.printToPDF) {
+          printToPDF(currentProject.title);
+        } else {
+          showNotification('Use the "Save as PDF" option in the print dialog', 'info');
+          printContent();
+        }
+      }
+    });
+  }
+  
+  if (exportExcelBtn) {
+    exportExcelBtn.addEventListener('click', () => {
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        exportProjectProductsToCSV(currentProject);
+      }
+    });
+  }
+  
+  if (hoursReportBtn) {
+    hoursReportBtn.addEventListener('click', () => {
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        openHoursReportWindow(currentProject);
+      } else {
+        showNotification('No project data available for hours report', 'error');
+      }
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded');
+  
+  // Setup print view buttons
+  setupPrintViewButtons();
   
   // Ensure window.allProducts exists and is empty on startup
   if (typeof window.allProducts === 'undefined') {
@@ -121,16 +255,175 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Function to create/update mobile theme toggle button
-  function updateMobileThemeToggle() {
-    const isMobile = window.innerWidth <= 768;
-    const isSidebarCollapsed = document.body.classList.contains('collapsed-sidebar');
-    
-    // Remove existing mobile theme toggle if it exists
-    const existingToggle = document.querySelector('.theme-toggle-mobile');
-    if (existingToggle) {
-      existingToggle.remove();
+  // Load user settings from local storage and app data
+function loadUserSettings() {
+  console.log('Loading user settings...');
+  
+  // First try to load from localStorage for backward compatibility
+  const userName = localStorage.getItem('userName');
+  const userRole = localStorage.getItem('userRole');
+  const defaultCurrency = localStorage.getItem('defaultCurrency');
+  
+  // Populate form fields if data exists
+  if (userName) {
+    const userNameInput = document.getElementById('user-name');
+    if (userNameInput) userNameInput.value = userName;
+  }
+  
+  if (userRole) {
+    const userRoleSelect = document.getElementById('user-role');
+    if (userRoleSelect) userRoleSelect.value = userRole;
+  }
+  
+  if (defaultCurrency) {
+    // Set the default currency in the settings page
+    const defaultCurrencySelect = document.getElementById('default-currency');
+    if (defaultCurrencySelect && defaultCurrencySelect.querySelector(`option[value="${defaultCurrency}"]`)) {
+      defaultCurrencySelect.value = defaultCurrency;
     }
+    
+    // Also update other currency selects throughout the app for consistency
+    const currencySelects = document.querySelectorAll('select[id$="-currency"]');
+    currencySelects.forEach(select => {
+      if (select && select.querySelector(`option[value="${defaultCurrency}"]`)) {
+        select.value = defaultCurrency;
+      }
+    });
+  }
+  
+  // Try to load from app data storage - use same special file approach
+  if (window.electron && window.electron.database && window.electron.database.readFile) {
+    window.electron.database.readFile('__app_settings__.json')
+      .then(result => {
+        if (!result.error && result.data) {
+          const appSettings = result.data;
+          console.log('Loaded app settings:', appSettings);
+          
+          // Apply user name if set
+          if (appSettings.userName) {
+            const userNameInput = document.getElementById('user-name');
+            if (userNameInput) userNameInput.value = appSettings.userName;
+          }
+          
+          // Apply user role if set
+          if (appSettings.userRole) {
+            const userRoleSelect = document.getElementById('user-role');
+            if (userRoleSelect) userRoleSelect.value = appSettings.userRole;
+          }
+          
+          // Apply default currency if set
+          if (appSettings.defaultCurrency) {
+            // Set the default currency in the settings page
+            const defaultCurrencySelect = document.getElementById('default-currency');
+            if (defaultCurrencySelect && defaultCurrencySelect.querySelector(`option[value="${appSettings.defaultCurrency}"]`)) {
+              defaultCurrencySelect.value = appSettings.defaultCurrency;
+            }
+            
+            // Also update other currency selects throughout the app for consistency
+            const currencySelects = document.querySelectorAll('select[id$="-currency"]');
+            currencySelects.forEach(select => {
+              if (select && select.querySelector(`option[value="${appSettings.defaultCurrency}"]`)) {
+                select.value = appSettings.defaultCurrency;
+              }
+            });
+          }
+          
+          // Apply categories if they exist
+          if (appSettings.categories && Array.isArray(appSettings.categories)) {
+            // Store categories for later use
+            window.appCategories = appSettings.categories;
+            
+            // Update the UI
+            renderCategoriesInSettings();
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Error loading settings from app data:', err);
+      });
+  }
+}
+
+// Save user settings to both localStorage and app data
+function saveUserSettings() {
+  console.log('Saving user settings...');
+  
+  // Get values from form
+  const userNameInput = document.getElementById('user-name');
+  const userRoleSelect = document.getElementById('user-role');
+  const userName = userNameInput ? userNameInput.value.trim() : '';
+  const userRole = userRoleSelect ? userRoleSelect.value : 'staff';
+  
+  // Get the default currency from settings
+  const defaultCurrencySelect = document.getElementById('default-currency');
+  const defaultCurrency = defaultCurrencySelect ? defaultCurrencySelect.value : 'USD';
+  
+  // Get categories from the UI
+  const categories = [];
+  const categoryItems = document.querySelectorAll('.category-item');
+  categoryItems.forEach((item, index) => {
+    const categoryId = item.dataset.id;
+    const categoryName = item.querySelector('.category-title').textContent.trim();
+    
+    categories.push({
+      id: categoryId,
+      name: categoryName,
+      order: index
+    });
+  });
+  
+  // Save to localStorage for backward compatibility
+  localStorage.setItem('userName', userName);
+  localStorage.setItem('userRole', userRole);
+  localStorage.setItem('defaultCurrency', defaultCurrency);
+  
+  // Store categories globally
+  window.appCategories = categories;
+  
+  // Create the settings object to save
+  const settings = {
+    userName,
+    userRole,
+    defaultCurrency,
+    categories
+  };
+  
+  // Save to app data storage - use a special saving approach 
+  // to ensure settings go to the app's data directory regardless of database path
+  if (window.electron && window.electron.database && window.electron.database.saveFile) {
+    // Special parameter to indicate this is app settings, not user data
+    const specialFileName = '__app_settings__.json';
+    
+    window.electron.database.saveFile(specialFileName, settings)
+      .then(result => {
+        if (result.success) {
+          console.log('Settings saved to app data successfully');
+          showNotification('Settings saved successfully', 'success');
+        } else {
+          console.error('Error saving settings to app data:', result.error);
+          showNotification('Error saving settings: ' + result.error, 'error');
+        }
+      })
+      .catch(err => {
+        console.error('Exception saving settings:', err);
+        showNotification('Error saving settings', 'error');
+      });
+  } else {
+    console.log('Electron database API not available, using localStorage only');
+    showNotification('Settings saved to browser storage', 'info');
+  }
+}
+
+// Function to create/update mobile theme toggle button
+function updateMobileThemeToggle() {
+  const isMobile = window.innerWidth <= 768;
+  const isSidebarCollapsed = document.body.classList.contains('collapsed-sidebar');
+  
+  // Remove existing mobile theme toggle if it exists
+  const existingToggle = document.querySelector('.theme-toggle-mobile');
+  if (existingToggle) {
+    existingToggle.remove();
+  }
     
     // Create new mobile theme toggle if needed
     if (isMobile && isSidebarCollapsed) {
@@ -259,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
-      // Move db-path-container based on selected tab
+      // Products database path should only be visible in products tab
       const dbPathContainer = document.getElementById('db-path-container');
       if (dbPathContainer) {
         if (target === 'products') {
@@ -269,12 +562,14 @@ document.addEventListener('DOMContentLoaded', () => {
             productsHeader.prepend(dbPathContainer);
           }
         } else {
-          // Hide the db path container from other tabs
+          // Hide it when not in products tab
           if (dbPathContainer.parentNode) {
             dbPathContainer.parentNode.removeChild(dbPathContainer);
           }
         }
       }
+      
+      // Projects database path container is handled separately and already in the HTML
     });
   });
   
@@ -387,25 +682,19 @@ document.addEventListener('DOMContentLoaded', () => {
           console.log('Loading from local data directory based on localStorage setting');
           await loadProducts();
         } else {
-          console.log('Loading from custom directory based on localStorage setting:', finalPath);
-          console.log('Sending custom path to main process:', finalPath);
-          // Force setting the database path in main process
-          const response = await window.electron.database.selectPath(finalPath);
-          console.log('Response from selectPath:', response);
-          
-          // Check if response indicates an error
-          if (response && response.error) {
-            console.error('Error selecting database path:', response.error);
-            showNotification(`Error: ${response.error}. Reverting to default database.`, 'error');
-            
-            // Reset to local data directory
+          console.log('Loading from custom directory based on localStorage setting:', lastLoadedPath);
+          // Don't open a folder dialog on startup
+          // Instead, just use the saved path directly
+          try {
+            // Just use the lastLoadedPath directly without reopening the folder dialog
+            console.log('Using the stored path from localStorage without opening folder dialog');
+            loadDatabaseSummary(lastLoadedPath);
+          } catch (err) {
+            console.error('Error loading from saved database path:', err);
+            // Fallback to local data directory
             displayDatabasePath('Local data directory');
-            localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
-            await loadProducts(); 
-          } else {
-            // Path was set successfully
-            showNotification(`Database path loaded: ${finalPath}`, 'success');
-            loadDatabaseSummary(finalPath);
+            await loadProducts();
+
           }
         }
       } 
@@ -432,70 +721,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Display the database path in UI
+  // Display the products database path in UI
   function displayDatabasePath(path) {
-    if (!dbPathContainer) return;
+    // Update only the products database path container
+    const container = document.getElementById('db-path-container');
     
-    dbPathContainer.innerHTML = `
-      <div class="db-path-display">
-        <div class="path">${path}</div>
-        <div class="status connected">Connected</div>
-        <button id="show-settings-btn" title="Show App Settings" style="margin-left: 10px;">
-          <i class="fa fa-info-circle"></i>
-        </button>
-        <button id="reset-settings-btn" title="Reset Settings File" style="margin-left: 5px;">
-          <i class="fa fa-exclamation-triangle"></i>
-        </button>
-      </div>
-    `;
-    
-    // Add click handler to settings button
-    const showSettingsBtn = document.getElementById('show-settings-btn');
-    if (showSettingsBtn) {
-      showSettingsBtn.addEventListener('click', showAppSettings);
-    }
-    
-    // Add click handler to reset settings button
-    const resetSettingsBtn = document.getElementById('reset-settings-btn');
-    if (resetSettingsBtn) {
-      resetSettingsBtn.addEventListener('click', async () => {
-        if (confirm('⚠️ WARNING: This will reset all app settings to default values. Continue?')) {
-          try {
-            const result = await window.electron.database.resetAppSettings();
-            console.log('Reset settings result:', result);
-            
-            if (result.success) {
-              alert(`Settings reset successful:\n${JSON.stringify(result.settings, null, 2)}`);
-              
-              // Clear localStorage and reload app
-              localStorage.clear();
-              localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
-              
-              if (confirm('Settings have been reset. Reload the app now?')) {
-                location.reload();
-              }
-            } else {
-              alert('Error resetting settings: ' + (result.error || 'Unknown error'));
-            }
-          } catch (err) {
-            console.error('Error resetting app settings:', err);
-            alert('Error resetting settings: ' + err.message);
-          }
-        }
-      });
+    if (container) {
+      container.innerHTML = `
+        <div class="db-path-display">
+          <div class="path">${path}</div>
+          <div class="status connected">Connected</div>
+        </div>
+      `;
     }
   }
   
-  // Display when no database path is set
+  // Display when no products database path is set
   function displayNoDatabasePath() {
-    if (!dbPathContainer) return;
+    // Update only the products database path container
+    const container = document.getElementById('db-path-container');
     
-    dbPathContainer.innerHTML = `
-      <div class="db-path-display">
-        <div class="path">No database directory selected</div>
-        <div class="status disconnected">Not Connected</div>
-      </div>
-    `;
+    if (container) {
+      container.innerHTML = `
+        <div class="db-path-display">
+          <div class="path">No database directory selected</div>
+          <div class="status disconnected">Not Connected</div>
+        </div>
+      `;
+    }
   }
   
   // Show app settings for debugging
@@ -651,12 +904,10 @@ ${JSON.stringify(result.settings, null, 2)}
           // Set products directly from the result (we already cleared existing ones above)
           window.allProducts = result.data.products;
           
-          // If the result includes a path, store it in localStorage
-          if (result.path) {
-            console.log('Storing path from result in localStorage:', result.path);
-            localStorage.setItem('lastLoadedDatabasePath', result.path);
-          } else {
-            // Otherwise store as default local directory
+          // Previously: localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
+          // Do not override the lastLoadedDatabasePath if loading from local data directory
+          if (!localStorage.getItem('lastLoadedDatabasePath')) {
+            // Only set it if it's not already set
             localStorage.setItem('lastLoadedDatabasePath', 'Local data directory');
           }
           
@@ -1301,6 +1552,7 @@ ${JSON.stringify(result.settings, null, 2)}
   
   // Modal field elements
   const productIdField = document.getElementById('product-id');
+  const productCustomIdField = document.getElementById('product-custom-id');
   const productTypeField = document.getElementById('product-type');
   const productNameField = document.getElementById('product-name');
   const productDescriptionField = document.getElementById('product-description');
@@ -1545,6 +1797,7 @@ ${JSON.stringify(result.settings, null, 2)}
     
     // Basic fields
     if (productIdField) productIdField.value = product.id || '';
+    if (productCustomIdField) productCustomIdField.value = product.customId || '';
     if (productNameField) productNameField.value = product.name || '';
     if (productDescriptionField) productDescriptionField.value = product.description || '';
     if (productPriceField) productPriceField.value = product.price || '';
@@ -1577,6 +1830,16 @@ ${JSON.stringify(result.settings, null, 2)}
     
     // Features
     populateFeatures(product.features || []);
+    
+    // Installation times
+    const timeEngineering = document.getElementById('product-time-engineering');
+    const timeProduction = document.getElementById('product-time-production');
+    const timeCommissioning = document.getElementById('product-time-commissioning');
+    
+    // Set installation time values if they exist, otherwise default to 0
+    if (timeEngineering) timeEngineering.value = product.installationTime?.engineering || 0;
+    if (timeProduction) timeProduction.value = product.installationTime?.production || 0;
+    if (timeCommissioning) timeCommissioning.value = product.installationTime?.commissioning || 0;
     
     // Bundle items
     if (isBundle && product.bundleItems) {
@@ -2077,6 +2340,7 @@ ${JSON.stringify(result.settings, null, 2)}
     const updatedProduct = {
       ...currentEditingProduct,
       id: currentEditingProduct.id, // Make absolutely sure the ID is preserved
+      customId: productCustomIdField ? productCustomIdField.value : currentEditingProduct.customId,
       name: productNameField ? productNameField.value : currentEditingProduct.name,
       description: productDescriptionField ? productDescriptionField.value : currentEditingProduct.description,
       price: productPriceField ? parseFloat(productPriceField.value) : currentEditingProduct.price,
@@ -2170,6 +2434,17 @@ ${JSON.stringify(result.settings, null, 2)}
         .filter(value => value !== '');
     }
     
+    // Update installation times
+    const timeEngineering = document.getElementById('product-time-engineering');
+    const timeProduction = document.getElementById('product-time-production');
+    const timeCommissioning = document.getElementById('product-time-commissioning');
+    
+    updatedProduct.installationTime = {
+      engineering: timeEngineering ? parseFloat(timeEngineering.value) || 0 : 0,
+      production: timeProduction ? parseFloat(timeProduction.value) || 0 : 0,
+      commissioning: timeCommissioning ? parseFloat(timeCommissioning.value) || 0 : 0
+    };
+    
     // Update product in the allProducts array
     console.log(`Searching for product with ID ${updatedProduct.id} in allProducts array of length ${allProducts.length}`);
     const productIndex = allProducts.findIndex(p => p.id === updatedProduct.id);
@@ -2262,6 +2537,27 @@ ${JSON.stringify(result.settings, null, 2)}
       Price: ${formatPrice(product.price, product.currency)}
       Status: ${product.status || 'Active'}
     `;
+    
+    // Add installation time information if available
+    if (product.installationTime) {
+      const totalTime = (product.installationTime.engineering || 0) + 
+                        (product.installationTime.production || 0) + 
+                        (product.installationTime.commissioning || 0);
+      
+      if (totalTime > 0) {
+        details += `\n\nInstallation Time (hours):`;
+        if (product.installationTime.engineering > 0) {
+          details += `\n- Engineering: ${product.installationTime.engineering}`;
+        }
+        if (product.installationTime.production > 0) {
+          details += `\n- Production: ${product.installationTime.production}`;
+        }
+        if (product.installationTime.commissioning > 0) {
+          details += `\n- Commissioning: ${product.installationTime.commissioning}`;
+        }
+        details += `\n- Total: ${totalTime}`;
+      }
+    }
     
     // For bundles, add bundle-specific information
     if (product.isBundle) {
@@ -2374,6 +2670,7 @@ ${JSON.stringify(result.settings, null, 2)}
   const saveUserSettingsBtn = document.getElementById('save-user-settings');
   if (saveUserSettingsBtn) {
     saveUserSettingsBtn.addEventListener('click', () => {
+      // Use our enhanced function that saves to app data too
       saveUserSettings();
     });
   }
@@ -2419,8 +2716,9 @@ ${JSON.stringify(result.settings, null, 2)}
 
 // Functions for user settings
 
-// Save user settings to localStorage
-function saveUserSettings() {
+// Original save user settings to localStorage function 
+// Renamed to avoid conflict with our enhanced version
+function saveUserSettingsToLocalStorage() {
   const userName = document.getElementById('user-name').value.trim();
   const userRole = document.getElementById('user-role').value;
   
@@ -2461,8 +2759,24 @@ function saveProductCategories() {
     order: index
   }));
   
-  // Save to localStorage
+  // Save to localStorage for backward compatibility
   localStorage.setItem('productCategories', JSON.stringify(categories));
+  
+  // Store categories globally
+  window.appCategories = categories;
+  
+  // Save settings
+  try {
+    // Save to app settings if the saveUserSettings function exists
+    if (typeof saveUserSettings === 'function') {
+      saveUserSettings();
+    } else {
+      // Otherwise, just show a success message as we've already saved to localStorage
+      console.log('saveUserSettings function not found, using localStorage only');
+    }
+  } catch (err) {
+    console.error('Error saving user settings:', err);
+  }
   
   // Show success message
   showNotification('Product categories saved successfully', 'success');
@@ -2555,7 +2869,13 @@ function generateCategoryId() {
 
 // Load product categories
 function loadProductCategories() {
-  // Try to load from localStorage
+  // First check if we have categories in memory from app data
+  if (window.appCategories && Array.isArray(window.appCategories) && window.appCategories.length > 0) {
+    console.log('Using app categories from memory:', window.appCategories);
+    return window.appCategories;
+  }
+  
+  // Then try to load from localStorage for backward compatibility
   const savedCategories = localStorage.getItem('productCategories');
   
   if (savedCategories) {
@@ -3702,7 +4022,7 @@ function captureInitialProjects() {
       client: '',
       description: '',
       tasks: [],
-      teamSize: 3,
+      teamSize: 0,
       budget: 5000,
       createdAt: new Date().toISOString(),
       createdBy: getCurrentUserName()
@@ -3780,20 +4100,10 @@ function addProjectCardToUI(project) {
       <div class="project-deadline">
         <i class="fa fa-calendar"></i> Due: ${formattedDate}
       </div>
-      <div class="project-team">
-        <div class="team-members">
-          <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-          <img src="https://via.placeholder.com/24" alt="Team Member" class="team-member">
-          ${project.teamSize > 2 ? `<span class="team-more">+${project.teamSize - 2}</span>` : ''}
-        </div>
-      </div>
     </div>
     <div class="project-stats">
       ${tasksCountHtml}
       ${productsCountHtml}
-      <div class="stat">
-        <i class="fa fa-comment"></i> 0
-      </div>
       <div class="stat">
         <i class="fa fa-paperclip"></i> 0
       </div>
@@ -4404,8 +4714,14 @@ function exportProjectProductsToCSV(project) {
     }
   }
   
-  // CSV header
-  let csvContent = `Category,Product ID,Product Name,Type,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency})\n`;
+  // Helper function to escape CSV fields
+  const escapeCsv = (field) => {
+    if (!field) return '';
+    let str = String(field);
+    // Remove any newlines and excessive whitespace
+    str = str.replace(/\s+/g, ' ').trim();
+    return str.includes(',') ? `"${str}"` : str;
+  };
   
   // Get all categories
   const categories = {};
@@ -4415,13 +4731,20 @@ function exportProjectProductsToCSV(project) {
     });
   }
   
+  // Create rows array to store all product data
+  const rows = [];
+  
   // Get all products by category
   project.products.forEach(product => {
     const productDetails = findProductById(product.productId);
     if (productDetails) {
-      const categoryName = product.categoryId ? 
+      // Get category name and ensure it's a simple string without formatting/newlines
+      let categoryName = product.categoryId ? 
         (categories[product.categoryId] || 'Unknown Category') : 
         'Uncategorized';
+      
+      // Ensure the category name is clean (no newlines, excessive spaces, etc.)
+      categoryName = categoryName.replace(/\s+/g, ' ').trim();
       
       // Convert prices to output currency
       const convertedUnitPrice = convertCurrency(
@@ -4431,19 +4754,54 @@ function exportProjectProductsToCSV(project) {
       );
       const totalPrice = convertedUnitPrice * product.quantity;
       
-      const unitPrice = formatPrice(convertedUnitPrice, outputCurrency, false);
-      const totalPriceFormatted = formatPrice(totalPrice, outputCurrency, false);
+      // Format prices for CSV export - without commas
+      const unitPrice = convertedUnitPrice.toFixed(2);
+      const totalPriceFormatted = totalPrice.toFixed(2);
       
-      // Escape fields that might contain commas
-      const escapeCsv = (field) => {
-        if (!field) return '';
-        const str = String(field);
-        return str.includes(',') ? `"${str}"` : str;
-      };
+      // Calculate category total - remove this as we don't want it in the export
+      // const categoryTotal = null;
       
-      // Add CSV row
-      csvContent += `${escapeCsv(categoryName)},${escapeCsv(productDetails.id)},${escapeCsv(productDetails.name)},${product.isOption ? 'Optional' : 'Required'},${product.quantity},${unitPrice},${totalPriceFormatted}\n`;
+      // Get installation time values
+      const engineeringHours = productDetails.installationTime?.engineering || 0;
+      const productionHours = productDetails.installationTime?.production || 0;
+      const commissioningHours = productDetails.installationTime?.commissioning || 0;
+      const totalHours = engineeringHours + productionHours + commissioningHours;
+      
+      // Multiply hours by quantity
+      const totalEngineeringHours = engineeringHours * product.quantity;
+      const totalProductionHours = productionHours * product.quantity;
+      const totalCommissioningHours = commissioningHours * product.quantity;
+      const grandTotalHours = totalHours * product.quantity;
+      
+      // Add to rows array
+      rows.push({
+        categoryName,
+        productId: productDetails.id,
+        customId: productDetails.customId || '',
+        productName: productDetails.name,
+        type: product.isOption ? 'Optional' : 'Required',
+        quantity: product.quantity,
+        unitPrice,
+        totalPrice: totalPriceFormatted,
+        engineeringHours: totalEngineeringHours,
+        productionHours: totalProductionHours,
+        commissioningHours: totalCommissioningHours,
+        totalHours: grandTotalHours
+      });
     }
+  });
+  
+  // Check if we have any rows
+  if (rows.length === 0) {
+    showNotification('No product details found to export', 'error');
+    return;
+  }
+  
+  // Create CSV content from rows array with clean formatting
+  let csvContent = `Category,Product ID,Custom ID,Product Name,Type,Quantity,Unit Price (${outputCurrency}),Total Price (${outputCurrency}),Engineering Hours,Production Hours,Commissioning Hours,Total Hours\n`;
+  
+  rows.forEach(row => {
+    csvContent += `${escapeCsv(row.categoryName)},${escapeCsv(row.productId)},${escapeCsv(row.customId)},${escapeCsv(row.productName)},${row.type},${row.quantity},${row.unitPrice},${row.totalPrice},${row.engineeringHours},${row.productionHours},${row.commissioningHours},${row.totalHours}\n`;
   });
   
   // Create Blob and download link
@@ -4474,6 +4832,551 @@ function formatPrice(price, currency = 'USD', includeCurrency = true) {
   });
   
   return formatter.format(price);
+}
+
+// Create a dedicated hours summary table for printing
+function createHoursSummaryTable(project, totalEngineeringTime, totalProductionTime, totalCommissioningTime) {
+  const totalInstallationTime = totalEngineeringTime + totalProductionTime + totalCommissioningTime;
+  
+  // If no hours, don't create the table
+  if (totalInstallationTime <= 0) return;
+  
+  // Get the print view container
+  const printViewContainer = document.querySelector('.print-view-container');
+  if (!printViewContainer) return;
+  
+  // Create a page break element before the hours summary
+  const pageBreak = document.createElement('div');
+  pageBreak.style.pageBreakBefore = 'always';
+  pageBreak.style.height = '1px';
+  pageBreak.style.width = '100%';
+  printViewContainer.appendChild(pageBreak);
+  
+  // Create a container for the hours summary on its own page
+  const hoursSummaryContainer = document.createElement('div');
+  hoursSummaryContainer.id = 'hours-summary-section';
+  hoursSummaryContainer.className = 'hours-summary-container print-section';
+  hoursSummaryContainer.style.marginTop = '50px';
+  hoursSummaryContainer.style.pageBreakInside = 'avoid';
+  hoursSummaryContainer.style.border = '2px solid #000';
+  hoursSummaryContainer.style.padding = '15px';
+  hoursSummaryContainer.style.backgroundColor = '#FFFFFF';
+  hoursSummaryContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+  
+  // Create a header
+  const summaryHeader = document.createElement('h2');
+  summaryHeader.style.borderBottom = '1px solid #000';
+  summaryHeader.style.paddingBottom = '8px';
+  summaryHeader.style.marginBottom = '15px';
+  summaryHeader.style.textAlign = 'center';
+  summaryHeader.style.fontSize = '14pt';
+  summaryHeader.innerHTML = 'INSTALLATION HOURS SUMMARY';
+  
+  hoursSummaryContainer.appendChild(summaryHeader);
+  
+  // Create a table for the hours summary
+  const summaryTable = document.createElement('table');
+  summaryTable.style.width = '100%';
+  summaryTable.style.borderCollapse = 'collapse';
+  summaryTable.style.margin = '0 auto';
+  summaryTable.border = '1';
+  summaryTable.setAttribute('cellpadding', '8');
+  summaryTable.setAttribute('cellspacing', '0');
+  
+  // Create the table header
+  const headerRow = document.createElement('tr');
+  headerRow.style.backgroundColor = '#f0f0f0';
+  headerRow.style.fontWeight = 'bold';
+  
+  // Create header cells
+  const headers = ['Category', 'Engineering Hours', 'Production Hours', 'Commissioning Hours', 'Total Hours'];
+  headers.forEach(headerText => {
+    const th = document.createElement('th');
+    th.textContent = headerText;
+    th.style.padding = '8px';
+    th.style.border = '1px solid #999';
+    headerRow.appendChild(th);
+  });
+  
+  summaryTable.appendChild(headerRow);
+  
+  // Create rows for each category
+  let categoryEngineeringHours = 0;
+  let categoryProductionHours = 0;
+  let categoryCommissioningHours = 0;
+  
+  // Process categories
+  if (project.productCategories && project.productCategories.length > 0) {
+    // Sort categories
+    const sortedCategories = [...project.productCategories].sort((a, b) => a.order - b.order);
+    
+    sortedCategories.forEach(category => {
+      // Get products for this category
+      const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+      
+      // Calculate hours
+      let engineeringHours = 0;
+      let productionHours = 0;
+      let commissioningHours = 0;
+      
+      categoryProducts.forEach(product => {
+        const productDetails = findProductById(product.productId);
+        if (productDetails && productDetails.installationTime) {
+          engineeringHours += (productDetails.installationTime.engineering || 0) * product.quantity;
+          productionHours += (productDetails.installationTime.production || 0) * product.quantity;
+          commissioningHours += (productDetails.installationTime.commissioning || 0) * product.quantity;
+        }
+      });
+      
+      // Skip categories with no hours
+      if (engineeringHours === 0 && productionHours === 0 && commissioningHours === 0) {
+        return;
+      }
+      
+      // Add category hours to total
+      categoryEngineeringHours += engineeringHours;
+      categoryProductionHours += productionHours;
+      categoryCommissioningHours += commissioningHours;
+      
+      // Create a row for this category
+      const categoryRow = document.createElement('tr');
+      
+      // Category name cell
+      const nameCell = document.createElement('td');
+      nameCell.textContent = category.name;
+      nameCell.style.padding = '8px';
+      nameCell.style.border = '1px solid #999';
+      nameCell.style.fontWeight = 'bold';
+      categoryRow.appendChild(nameCell);
+      
+      // Engineering hours
+      const engCell = document.createElement('td');
+      engCell.textContent = engineeringHours.toFixed(1);
+      engCell.style.padding = '8px';
+      engCell.style.border = '1px solid #999';
+      engCell.style.textAlign = 'center';
+      categoryRow.appendChild(engCell);
+      
+      // Production hours
+      const prodCell = document.createElement('td');
+      prodCell.textContent = productionHours.toFixed(1);
+      prodCell.style.padding = '8px';
+      prodCell.style.border = '1px solid #999';
+      prodCell.style.textAlign = 'center';
+      categoryRow.appendChild(prodCell);
+      
+      // Commissioning hours
+      const commCell = document.createElement('td');
+      commCell.textContent = commissioningHours.toFixed(1);
+      commCell.style.padding = '8px';
+      commCell.style.border = '1px solid #999';
+      commCell.style.textAlign = 'center';
+      categoryRow.appendChild(commCell);
+      
+      // Total hours
+      const totalCell = document.createElement('td');
+      const categoryTotal = engineeringHours + productionHours + commissioningHours;
+      totalCell.textContent = categoryTotal.toFixed(1);
+      totalCell.style.padding = '8px';
+      totalCell.style.border = '1px solid #999';
+      totalCell.style.textAlign = 'center';
+      totalCell.style.fontWeight = 'bold';
+      categoryRow.appendChild(totalCell);
+      
+      summaryTable.appendChild(categoryRow);
+    });
+  }
+  
+  // Add uncategorized products row if they have hours
+  const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
+  
+  if (uncategorizedProducts.length > 0) {
+    // Calculate hours
+    let uncategorizedEngHours = 0;
+    let uncategorizedProdHours = 0;
+    let uncategorizedCommHours = 0;
+    
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails && productDetails.installationTime) {
+        uncategorizedEngHours += (productDetails.installationTime.engineering || 0) * product.quantity;
+        uncategorizedProdHours += (productDetails.installationTime.production || 0) * product.quantity;
+        uncategorizedCommHours += (productDetails.installationTime.commissioning || 0) * product.quantity;
+      }
+    });
+    
+    // Add to category totals
+    categoryEngineeringHours += uncategorizedEngHours;
+    categoryProductionHours += uncategorizedProdHours;
+    categoryCommissioningHours += uncategorizedCommHours;
+    
+    // Only add row if there are hours
+    if (uncategorizedEngHours > 0 || uncategorizedProdHours > 0 || uncategorizedCommHours > 0) {
+      // Create a row for uncategorized
+      const uncatRow = document.createElement('tr');
+      
+      // Category name cell
+      const nameCell = document.createElement('td');
+      nameCell.textContent = 'Uncategorized Products';
+      nameCell.style.padding = '8px';
+      nameCell.style.border = '1px solid #999';
+      nameCell.style.fontWeight = 'bold';
+      uncatRow.appendChild(nameCell);
+      
+      // Engineering hours
+      const engCell = document.createElement('td');
+      engCell.textContent = uncategorizedEngHours.toFixed(1);
+      engCell.style.padding = '8px';
+      engCell.style.border = '1px solid #999';
+      engCell.style.textAlign = 'center';
+      uncatRow.appendChild(engCell);
+      
+      // Production hours
+      const prodCell = document.createElement('td');
+      prodCell.textContent = uncategorizedProdHours.toFixed(1);
+      prodCell.style.padding = '8px';
+      prodCell.style.border = '1px solid #999';
+      prodCell.style.textAlign = 'center';
+      uncatRow.appendChild(prodCell);
+      
+      // Commissioning hours
+      const commCell = document.createElement('td');
+      commCell.textContent = uncategorizedCommHours.toFixed(1);
+      commCell.style.padding = '8px';
+      commCell.style.border = '1px solid #999';
+      commCell.style.textAlign = 'center';
+      uncatRow.appendChild(commCell);
+      
+      // Total hours
+      const totalCell = document.createElement('td');
+      const uncatTotal = uncategorizedEngHours + uncategorizedProdHours + uncategorizedCommHours;
+      totalCell.textContent = uncatTotal.toFixed(1);
+      totalCell.style.padding = '8px';
+      totalCell.style.border = '1px solid #999';
+      totalCell.style.textAlign = 'center';
+      totalCell.style.fontWeight = 'bold';
+      uncatRow.appendChild(totalCell);
+      
+      summaryTable.appendChild(uncatRow);
+    }
+  }
+  
+  // Add a total row
+  const totalRow = document.createElement('tr');
+  totalRow.style.backgroundColor = '#f0f0f0';
+  totalRow.style.fontWeight = 'bold';
+  
+  // Project total cell
+  const totalLabelCell = document.createElement('td');
+  totalLabelCell.textContent = 'PROJECT TOTAL:';
+  totalLabelCell.style.padding = '8px';
+  totalLabelCell.style.border = '1px solid #999';
+  totalRow.appendChild(totalLabelCell);
+  
+  // Engineering total
+  const engTotalCell = document.createElement('td');
+  engTotalCell.textContent = totalEngineeringTime.toFixed(1);
+  engTotalCell.style.padding = '8px';
+  engTotalCell.style.border = '1px solid #999';
+  engTotalCell.style.textAlign = 'center';
+  totalRow.appendChild(engTotalCell);
+  
+  // Production total
+  const prodTotalCell = document.createElement('td');
+  prodTotalCell.textContent = totalProductionTime.toFixed(1);
+  prodTotalCell.style.padding = '8px';
+  prodTotalCell.style.border = '1px solid #999';
+  prodTotalCell.style.textAlign = 'center';
+  totalRow.appendChild(prodTotalCell);
+  
+  // Commissioning total
+  const commTotalCell = document.createElement('td');
+  commTotalCell.textContent = totalCommissioningTime.toFixed(1);
+  commTotalCell.style.padding = '8px';
+  commTotalCell.style.border = '1px solid #999';
+  commTotalCell.style.textAlign = 'center';
+  totalRow.appendChild(commTotalCell);
+  
+  // Grand total
+  const grandTotalCell = document.createElement('td');
+  grandTotalCell.textContent = totalInstallationTime.toFixed(1);
+  grandTotalCell.style.padding = '8px';
+  grandTotalCell.style.border = '1px solid #999';
+  grandTotalCell.style.textAlign = 'center';
+  totalRow.appendChild(grandTotalCell);
+  
+  summaryTable.appendChild(totalRow);
+  
+  // Add the table to the container
+  hoursSummaryContainer.appendChild(summaryTable);
+  
+  // Add a note about the hours
+  const hoursNote = document.createElement('div');
+  hoursNote.style.marginTop = '10px';
+  hoursNote.style.fontSize = '9pt';
+  hoursNote.style.fontStyle = 'italic';
+  hoursNote.style.textAlign = 'right';
+  hoursNote.innerHTML = '*Hours are calculated based on the installation time required for each product.';
+  
+  hoursSummaryContainer.appendChild(hoursNote);
+  
+  // Add the hours summary container to the print view container
+  printViewContainer.appendChild(hoursSummaryContainer);
+}
+
+// Open a dedicated hours report window
+function openHoursReportWindow(project) {
+  // Calculate total hours for the project
+  let totalEngineeringTime = 0;
+  let totalProductionTime = 0;
+  let totalCommissioningTime = 0;
+  
+  // Get hours from all products
+  (project.products || []).forEach(product => {
+    const productDetails = findProductById(product.productId);
+    if (productDetails && productDetails.installationTime) {
+      totalEngineeringTime += (productDetails.installationTime.engineering || 0) * product.quantity;
+      totalProductionTime += (productDetails.installationTime.production || 0) * product.quantity;
+      totalCommissioningTime += (productDetails.installationTime.commissioning || 0) * product.quantity;
+    }
+  });
+  
+  const totalInstallationTime = totalEngineeringTime + totalProductionTime + totalCommissioningTime;
+  
+  // If no hours, show notification and return
+  if (totalInstallationTime <= 0) {
+    showNotification('No installation hours found for this project', 'warning');
+    return;
+  }
+  
+  // Generate the hours report table HTML
+  let hoursSummaryHTML = '';
+  
+  // Start with a header
+  hoursSummaryHTML += `
+    <div class="print-view-header">
+      <h2>${project.title} - Installation Hours Summary</h2>
+      <div class="print-view-meta">
+        <div><strong>Client:</strong> ${project.client || 'N/A'}</div>
+        <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
+      </div>
+    </div>
+    
+    <p style="margin-bottom: 20px;">This report provides a breakdown of the installation hours required for this project by category.</p>
+  `;
+  
+  // Create the hours summary table
+  hoursSummaryHTML += `
+    <table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+      <thead style="background-color:#f0f0f0; font-weight:bold;">
+        <tr>
+          <th style="text-align:left; width:40%;">Category</th>
+          <th style="text-align:center; width:15%;">Engineering</th>
+          <th style="text-align:center; width:15%;">Production</th>
+          <th style="text-align:center; width:15%;">Commissioning</th>
+          <th style="text-align:center; width:15%;">Total Hours</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  // Add rows for each category
+  let categoryEngineeringHours = 0;
+  let categoryProductionHours = 0;
+  let categoryCommissioningHours = 0;
+  
+  // Process categories
+  if (project.productCategories && project.productCategories.length > 0) {
+    // Sort categories
+    const sortedCategories = [...project.productCategories].sort((a, b) => a.order - b.order);
+    
+    sortedCategories.forEach(category => {
+      // Get products for this category
+      const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
+      
+      // Calculate hours
+      let engineeringHours = 0;
+      let productionHours = 0;
+      let commissioningHours = 0;
+      
+      categoryProducts.forEach(product => {
+        const productDetails = findProductById(product.productId);
+        if (productDetails && productDetails.installationTime) {
+          engineeringHours += (productDetails.installationTime.engineering || 0) * product.quantity;
+          productionHours += (productDetails.installationTime.production || 0) * product.quantity;
+          commissioningHours += (productDetails.installationTime.commissioning || 0) * product.quantity;
+        }
+      });
+      
+      // Skip categories with no hours
+      if (engineeringHours === 0 && productionHours === 0 && commissioningHours === 0) {
+        return;
+      }
+      
+      // Add to totals
+      categoryEngineeringHours += engineeringHours;
+      categoryProductionHours += productionHours;
+      categoryCommissioningHours += commissioningHours;
+      
+      // Add row for this category
+      const categoryTotal = engineeringHours + productionHours + commissioningHours;
+      hoursSummaryHTML += `
+        <tr>
+          <td style="font-weight:bold; text-align:left;">${category.name}</td>
+          <td style="text-align:center;">${engineeringHours.toFixed(1)}</td>
+          <td style="text-align:center;">${productionHours.toFixed(1)}</td>
+          <td style="text-align:center;">${commissioningHours.toFixed(1)}</td>
+          <td style="font-weight:bold; text-align:center;">${categoryTotal.toFixed(1)}</td>
+        </tr>
+      `;
+    });
+  }
+  
+  // Add uncategorized products row if they have hours
+  const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
+  
+  if (uncategorizedProducts.length > 0) {
+    // Calculate hours
+    let uncategorizedEngHours = 0;
+    let uncategorizedProdHours = 0;
+    let uncategorizedCommHours = 0;
+    
+    uncategorizedProducts.forEach(product => {
+      const productDetails = findProductById(product.productId);
+      if (productDetails && productDetails.installationTime) {
+        uncategorizedEngHours += (productDetails.installationTime.engineering || 0) * product.quantity;
+        uncategorizedProdHours += (productDetails.installationTime.production || 0) * product.quantity;
+        uncategorizedCommHours += (productDetails.installationTime.commissioning || 0) * product.quantity;
+      }
+    });
+    
+    // Add to totals
+    categoryEngineeringHours += uncategorizedEngHours;
+    categoryProductionHours += uncategorizedProdHours;
+    categoryCommissioningHours += uncategorizedCommHours;
+    
+    // Only add row if there are hours
+    if (uncategorizedEngHours > 0 || uncategorizedProdHours > 0 || uncategorizedCommHours > 0) {
+      const uncatTotal = uncategorizedEngHours + uncategorizedProdHours + uncategorizedCommHours;
+      hoursSummaryHTML += `
+        <tr>
+          <td style="font-weight:bold; text-align:left;">Uncategorized Products</td>
+          <td style="text-align:center;">${uncategorizedEngHours.toFixed(1)}</td>
+          <td style="text-align:center;">${uncategorizedProdHours.toFixed(1)}</td>
+          <td style="text-align:center;">${uncategorizedCommHours.toFixed(1)}</td>
+          <td style="font-weight:bold; text-align:center;">${uncatTotal.toFixed(1)}</td>
+        </tr>
+      `;
+    }
+  }
+  
+  // Add total row
+  hoursSummaryHTML += `
+    <tr style="background-color:#f0f0f0; font-weight:bold;">
+      <td style="text-align:left;">PROJECT TOTAL</td>
+      <td style="text-align:center;">${categoryEngineeringHours.toFixed(1)}</td>
+      <td style="text-align:center;">${categoryProductionHours.toFixed(1)}</td>
+      <td style="text-align:center;">${categoryCommissioningHours.toFixed(1)}</td>
+      <td style="text-align:center;">${totalInstallationTime.toFixed(1)}</td>
+    </tr>
+  `;
+  
+  // Close the table and add a note
+  hoursSummaryHTML += `
+      </tbody>
+    </table>
+    
+    <p style="font-style:italic; font-size:9pt; text-align:right; margin-top:10px;">
+      *Hours are calculated based on the installation time required for each product.
+    </p>
+  `;
+  
+  // Create a full HTML document for printing
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${project.title} - Installation Hours Report</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0.5in;
+          font-size: 10pt;
+          line-height: 1.3;
+          color: black;
+        }
+        
+        .print-view-header {
+          display: flex;
+          justify-content: space-between;
+          border-bottom: 1px solid #333;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+        
+        .print-view-header h2 {
+          font-size: 16pt;
+          margin: 0;
+        }
+        
+        .print-view-meta {
+          font-size: 10pt;
+          line-height: 1.4;
+          text-align: right;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+        }
+        
+        th, td {
+          border: 1px solid #999;
+          padding: 8px;
+        }
+        
+        th {
+          background-color: #f0f0f0;
+        }
+        
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      </style>
+    </head>
+    <body id="hours-report-frame">
+      ${hoursSummaryHTML}
+    </body>
+    </html>
+  `;
+  
+  // Open a new window with the hours report
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  if (printWindow) {
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    // Wait for resources to load then print
+    printWindow.onload = function() {
+      setTimeout(() => {
+        printWindow.print();
+        // Close the window after printing (or if print is canceled)
+        printWindow.onafterprint = function() {
+          printWindow.close();
+        };
+      }, 500);
+    };
+  } else {
+    showNotification('Unable to open print window. Please check your pop-up blocker settings.', 'error');
+  }
 }
 
 // Open a new window with the print-friendly content
@@ -4534,6 +5437,21 @@ function openPrintWindow(project) {
               display: flex;
               justify-content: space-between;
               font-weight: bold;
+              flex-wrap: wrap;
+            }
+            .print-category-name {
+              flex: 1 1 100%;
+              margin-bottom: 3pt;
+            }
+            .print-category-hours {
+              flex: 1 1 60%;
+              font-size: 8pt;
+              color: #444;
+              text-align: left;
+            }
+            .print-category-total {
+              flex: 1 1 40%;
+              text-align: right;
             }
             .print-product-table {
               width: 100%;
@@ -4561,6 +5479,17 @@ function openPrintWindow(project) {
               border-top: 1px solid #333;
               padding-top: 5pt;
               margin-top: 10pt;
+              font-size: 10pt;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+            }
+            .print-view-summary-hours {
+              font-size: 9pt;
+              text-align: left;
+              line-height: 1.4;
+            }
+            .print-view-summary-value {
               font-size: 10pt;
               text-align: right;
               font-weight: bold;
@@ -4709,6 +5638,17 @@ function openPrintWindowFallback(project) {
           padding-top: 5pt;
           margin-top: 10pt;
           font-size: 10pt;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+        }
+        .print-view-summary-hours {
+          font-size: 9pt;
+          text-align: left;
+          line-height: 1.4;
+        }
+        .print-view-summary-value {
+          font-size: 10pt;
           text-align: right;
           font-weight: bold;
         }
@@ -4842,9 +5782,13 @@ function generateProductPrintContent(project) {
   // Categories section
   content += `<div id="print-view-categories">`;
   
-  // Calculate total value for all products, with currency conversion
+  // Calculate total value and hours for all products, with currency conversion
   // Exclude optional products from total
   let totalValue = 0;
+  let totalEngHours = 0;
+  let totalProdHours = 0;
+  let totalCommHours = 0;
+  
   (project.products || []).forEach(product => {
     // Skip optional products in the total
     if (product.isOption) return;
@@ -4858,6 +5802,13 @@ function generateProductPrintContent(project) {
         outputCurrency
       );
       totalValue += convertedUnitPrice * product.quantity;
+      
+      // Add hours
+      totalEngHours += (productDetails.installationTime?.engineering || 0) * product.quantity;
+      totalProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
+      totalCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
+      
+      // Note: We don't add hours from bundled items - only count hours from the bundle itself
     }
   });
   
@@ -4877,6 +5828,10 @@ function generateProductPrintContent(project) {
       // Calculate category total with currency conversion
       // Exclude optional products from total
       let categoryTotal = 0;
+      let categoryEngHours = 0;
+      let categoryProdHours = 0;
+      let categoryCommHours = 0;
+      
       categoryProducts.forEach(product => {
         // Skip optional products in the total
         if (product.isOption) return;
@@ -4890,6 +5845,13 @@ function generateProductPrintContent(project) {
             outputCurrency
           );
           categoryTotal += convertedUnitPrice * product.quantity;
+          
+          // Add hours
+          categoryEngHours += (productDetails.installationTime?.engineering || 0) * product.quantity;
+          categoryProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
+          categoryCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
+          
+          // Note: We don't add hours from bundled items - only count hours from the bundle itself
         }
       });
       
@@ -4898,6 +5860,11 @@ function generateProductPrintContent(project) {
         <div class="print-category">
           <div class="print-category-header">
             <div class="print-category-name">${category.name}</div>
+            <div class="print-category-hours">
+              Engineering: ${categoryEngHours} hrs | 
+              Production: ${categoryProdHours} hrs | 
+              Commissioning: ${categoryCommHours} hrs
+            </div>
             <div class="print-category-total">${formatPrice(categoryTotal, outputCurrency)}</div>
           </div>
           
@@ -4905,10 +5872,13 @@ function generateProductPrintContent(project) {
             <thead>
               <tr>
                 <th style="width:15%">ID</th>
-                <th style="width:40%">Product</th>
+                <th style="width:25%">Product</th>
                 <th style="width:10%">Qty</th>
-                <th style="width:15%">Unit (${outputCurrency})</th>
-                <th style="width:20%">Total (${outputCurrency})</th>
+                <th style="width:10%">Eng. Hrs</th>
+                <th style="width:10%">Prod. Hrs</th>
+                <th style="width:10%">Comm. Hrs</th>
+                <th style="width:10%">Unit (${outputCurrency})</th>
+                <th style="width:10%">Total (${outputCurrency})</th>
               </tr>
             </thead>
             <tbody>
@@ -4929,12 +5899,25 @@ function generateProductPrintContent(project) {
           // Check if this is an optional product
           const rowClass = product.isOption ? 'optional-product' : '';
           
+          // Get installation time values
+          const engineeringHours = productDetails.installationTime?.engineering || 0;
+          const productionHours = productDetails.installationTime?.production || 0;
+          const commissioningHours = productDetails.installationTime?.commissioning || 0;
+          
+          // Calculate total hours
+          const totalEngHours = engineeringHours * product.quantity;
+          const totalProdHours = productionHours * product.quantity;
+          const totalCommHours = commissioningHours * product.quantity;
+          
           // Create the main product row
           content += `
             <tr class="${rowClass}">
               <td>${productDetails.id}</td>
               <td>${productDetails.name}${product.isOption ? ' <span style="color:#666;font-size:80%;font-style:italic">(Optional)</span>' : ''}</td>
               <td>${product.quantity}</td>
+              <td>${totalEngHours}</td>
+              <td>${totalProdHours}</td>
+              <td>${totalCommHours}</td>
               <td>${formatPrice(convertedUnitPrice, outputCurrency)}</td>
               <td>${formatPrice(totalPrice, outputCurrency)}</td>
             </tr>
@@ -4952,12 +5935,15 @@ function generateProductPrintContent(project) {
                   outputCurrency
                 );
                 
-                // Add bundle item row - with price shown as note only
+                // Add bundle item row - without hours since they're only counted at the bundle level
                 content += `
                   <tr class="bundle-subitem">
                     <td></td>
                     <td style="padding-left: 20px;">↳ ${bundledProduct.name}</td>
                     <td>${bundleItem.quantity * product.quantity}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
                     <td colspan="2" style="font-style: italic; color: #666;">Note: ${formatPrice(bundledItemUnitPrice, outputCurrency)} each</td>
                   </tr>
                 `;
@@ -4980,6 +5966,10 @@ function generateProductPrintContent(project) {
   if (uncategorizedProducts.length > 0) {
     // Calculate uncategorized total with currency conversion
     let uncategorizedTotal = 0;
+    let uncategorizedEngHours = 0;
+    let uncategorizedProdHours = 0;
+    let uncategorizedCommHours = 0;
+    
     uncategorizedProducts.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
@@ -4990,6 +5980,13 @@ function generateProductPrintContent(project) {
           outputCurrency
         );
         uncategorizedTotal += convertedUnitPrice * product.quantity;
+        
+        // Add hours
+        uncategorizedEngHours += (productDetails.installationTime?.engineering || 0) * product.quantity;
+        uncategorizedProdHours += (productDetails.installationTime?.production || 0) * product.quantity;
+        uncategorizedCommHours += (productDetails.installationTime?.commissioning || 0) * product.quantity;
+        
+        // Note: We don't add hours from bundled items - only count hours from the bundle itself
       }
     });
     
@@ -4998,6 +5995,11 @@ function generateProductPrintContent(project) {
       <div class="print-category">
         <div class="print-category-header">
           <div class="print-category-name">Uncategorized Products</div>
+          <div class="print-category-hours">
+            Engineering: ${uncategorizedEngHours} hrs | 
+            Production: ${uncategorizedProdHours} hrs | 
+            Commissioning: ${uncategorizedCommHours} hrs
+          </div>
           <div class="print-category-total">${formatPrice(uncategorizedTotal, outputCurrency)}</div>
         </div>
         
@@ -5005,10 +6007,13 @@ function generateProductPrintContent(project) {
           <thead>
             <tr>
               <th style="width:15%">ID</th>
-              <th style="width:40%">Product</th>
+              <th style="width:25%">Product</th>
               <th style="width:10%">Qty</th>
-              <th style="width:15%">Unit (${outputCurrency})</th>
-              <th style="width:20%">Total (${outputCurrency})</th>
+              <th style="width:10%">Eng. Hrs</th>
+              <th style="width:10%">Prod. Hrs</th>
+              <th style="width:10%">Comm. Hrs</th>
+              <th style="width:10%">Unit (${outputCurrency})</th>
+              <th style="width:10%">Total (${outputCurrency})</th>
             </tr>
           </thead>
           <tbody>
@@ -5026,12 +6031,25 @@ function generateProductPrintContent(project) {
         );
         const totalPrice = convertedUnitPrice * product.quantity;
         
+        // Get installation time values
+        const engineeringHours = productDetails.installationTime?.engineering || 0;
+        const productionHours = productDetails.installationTime?.production || 0;
+        const commissioningHours = productDetails.installationTime?.commissioning || 0;
+        
+        // Calculate total hours
+        const totalEngHours = engineeringHours * product.quantity;
+        const totalProdHours = productionHours * product.quantity;
+        const totalCommHours = commissioningHours * product.quantity;
+        
         // Create the main product row
         content += `
           <tr>
             <td>${productDetails.id}</td>
             <td>${productDetails.name}</td>
             <td>${product.quantity}</td>
+            <td>${totalEngHours}</td>
+            <td>${totalProdHours}</td>
+            <td>${totalCommHours}</td>
             <td>${formatPrice(convertedUnitPrice, outputCurrency)}</td>
             <td>${formatPrice(totalPrice, outputCurrency)}</td>
           </tr>
@@ -5049,12 +6067,15 @@ function generateProductPrintContent(project) {
                 outputCurrency
               );
               
-              // Add bundle item row - with price shown as note only
+              // Add bundle item row - without hours since they're only counted at the bundle level
               content += `
                 <tr class="bundle-subitem">
                   <td></td>
                   <td style="padding-left: 20px;">↳ ${bundledProduct.name}</td>
                   <td>${bundleItem.quantity * product.quantity}</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
                   <td colspan="2" style="font-style: italic; color: #666;">Note: ${formatPrice(bundledItemUnitPrice, outputCurrency)} each</td>
                 </tr>
               `;
@@ -5077,7 +6098,15 @@ function generateProductPrintContent(project) {
   // Add summary footer
   content += `
     <div class="print-view-summary">
-      Total Value: ${formatPrice(totalValue, outputCurrency)}
+      <div class="print-view-summary-hours">
+        <div><strong>Engineering:</strong> ${totalEngHours} hrs</div>
+        <div><strong>Production:</strong> ${totalProdHours} hrs</div>
+        <div><strong>Commissioning:</strong> ${totalCommHours} hrs</div>
+        <div><strong>Total Hours:</strong> ${totalEngHours + totalProdHours + totalCommHours} hrs</div>
+      </div>
+      <div class="print-view-summary-value">
+        Total Value: ${formatPrice(totalValue, outputCurrency)}
+      </div>
     </div>
   `;
   
@@ -5122,8 +6151,67 @@ function generateProductPrintView(project) {
     }
   });
   
-  // Set total in summary section using project currency
-  document.getElementById('print-view-total').textContent = `Total Value: ${formatMoney(totalValue, projectCurrency)}`;
+  // Calculate total installation time
+  let totalEngineeringTime = 0;
+  let totalProductionTime = 0;
+  let totalCommissioningTime = 0;
+  
+  (project.products || []).forEach(product => {
+    const productDetails = findProductById(product.productId);
+    if (productDetails && productDetails.installationTime) {
+      totalEngineeringTime += (productDetails.installationTime.engineering || 0) * product.quantity;
+      totalProductionTime += (productDetails.installationTime.production || 0) * product.quantity;
+      totalCommissioningTime += (productDetails.installationTime.commissioning || 0) * product.quantity;
+    }
+  });
+  
+  const totalInstallationTime = totalEngineeringTime + totalProductionTime + totalCommissioningTime;
+  
+  // Create a table for the project total that will display properly in print
+  const totalElement = document.getElementById('print-view-total');
+  totalElement.innerHTML = '';
+  
+  const totalTable = document.createElement('table');
+  totalTable.style.width = '100%';
+  totalTable.style.borderCollapse = 'collapse';
+  totalTable.style.marginTop = '10px';
+  totalTable.style.borderTop = '2px solid #000';
+  totalTable.style.paddingTop = '8px';
+  
+  const totalRow = totalTable.insertRow();
+  
+  // Label cell
+  const labelCell = totalRow.insertCell();
+  labelCell.style.width = '40%';
+  labelCell.style.textAlign = 'left';
+  labelCell.style.fontWeight = 'bold';
+  labelCell.textContent = 'PROJECT TOTAL:';
+  
+  // Hours cell
+  const hoursCell = totalRow.insertCell();
+  hoursCell.style.width = '40%';
+  hoursCell.style.textAlign = 'right';
+  
+  if (totalInstallationTime > 0) {
+    hoursCell.innerHTML = `
+      <span style="font-weight:bold;">Hours:</span> 
+      E:${totalEngineeringTime} P:${totalProductionTime} C:${totalCommissioningTime} 
+      <span style="font-weight:bold;">(${totalInstallationTime})</span>
+    `;
+  } else {
+    hoursCell.innerHTML = '&nbsp;';
+  }
+  
+  // Money cell
+  const moneyCell = totalRow.insertCell();
+  moneyCell.style.width = '20%';
+  moneyCell.style.textAlign = 'right';
+  moneyCell.style.fontWeight = 'bold';
+  moneyCell.textContent = formatMoney(totalValue, projectCurrency);
+  
+  totalElement.appendChild(totalTable);
+  
+  // Instead of trying to add to the existing print view, we'll create a separate button for hours report
   
   // Process categories
   if (project.productCategories && project.productCategories.length > 0) {
@@ -5132,7 +6220,7 @@ function generateProductPrintView(project) {
     
     // Create each category section
     sortedCategories.forEach(category => {
-      // Filter products for this category
+      // Filter products for this category (preserves the order from the products array)
       const categoryProducts = (project.products || []).filter(p => p.categoryId === category.id);
       
       // Skip empty categories for print view
@@ -5140,6 +6228,10 @@ function generateProductPrintView(project) {
       
       // Calculate category total, converting to project currency
       let categoryTotal = 0;
+      let categoryEngineeringTime = 0;
+      let categoryProductionTime = 0;
+      let categoryCommissioningTime = 0;
+      
       categoryProducts.forEach(product => {
         const productDetails = findProductById(product.productId);
         if (productDetails) {
@@ -5151,8 +6243,17 @@ function generateProductPrintView(project) {
             projectCurrency
           );
           categoryTotal += convertedPrice * product.quantity;
+          
+          // Add installation time (use product's own time values, even for bundles)
+          if (productDetails.installationTime) {
+            categoryEngineeringTime += (productDetails.installationTime.engineering || 0) * product.quantity;
+            categoryProductionTime += (productDetails.installationTime.production || 0) * product.quantity;
+            categoryCommissioningTime += (productDetails.installationTime.commissioning || 0) * product.quantity;
+          }
         }
       });
+      
+      const categoryTotalTime = categoryEngineeringTime + categoryProductionTime + categoryCommissioningTime;
       
       // Create category section
       const categorySection = document.createElement('div');
@@ -5161,10 +6262,47 @@ function generateProductPrintView(project) {
       // Create category header
       const categoryHeader = document.createElement('div');
       categoryHeader.className = 'print-category-header';
-      categoryHeader.innerHTML = `
-        <div class="print-category-name">${category.name}</div>
-        <div class="print-category-total">${formatMoney(categoryTotal)}</div>
-      `;
+      
+      // Create header as a table to ensure consistent display in print
+      const headerTable = document.createElement('table');
+      headerTable.className = 'category-header-table';
+      headerTable.style.width = '100%';
+      headerTable.style.borderCollapse = 'collapse';
+      
+      const headerRow = headerTable.insertRow();
+      
+      // Category name cell
+      const nameCell = headerRow.insertCell();
+      nameCell.style.width = '40%';
+      nameCell.style.textAlign = 'left';
+      nameCell.style.fontWeight = 'bold';
+      nameCell.textContent = category.name;
+      
+      // Hours cell
+      const hoursCell = headerRow.insertCell();
+      hoursCell.style.width = '40%';
+      hoursCell.style.textAlign = 'right';
+      
+      if (categoryTotalTime > 0) {
+        hoursCell.innerHTML = `
+          <span style="font-weight:bold;">Hours:</span> 
+          E:${categoryEngineeringTime} P:${categoryProductionTime} C:${categoryCommissioningTime} 
+          <span style="font-weight:bold;">(${categoryTotalTime})</span>
+        `;
+      } else {
+        hoursCell.innerHTML = '&nbsp;';
+      }
+      
+      // Money cell
+      const moneyCell = headerRow.insertCell();
+      moneyCell.style.width = '20%';
+      moneyCell.style.textAlign = 'right';
+      moneyCell.style.fontWeight = 'bold';
+      moneyCell.textContent = formatMoney(categoryTotal);
+      
+      // Clear existing content and append the table
+      categoryHeader.innerHTML = '';
+      categoryHeader.appendChild(headerTable);
       categorySection.appendChild(categoryHeader);
       
       // Create products table
@@ -5194,6 +6332,8 @@ function generateProductPrintView(project) {
         if (productDetails) {
           const totalPrice = productDetails.price * product.quantity;
           const row = document.createElement('tr');
+          
+          // Create the main product row
           row.innerHTML = `
             <td>${productDetails.id}</td>
             <td>${productDetails.name}${product.isOption ? ' <span style="color:#666;font-size:80%;font-style:italic">(Optional)</span>' : ''}</td>
@@ -5202,6 +6342,30 @@ function generateProductPrintView(project) {
             <td>${formatPrice(totalPrice, productDetails.currency)}</td>
           `;
           tableBody.appendChild(row);
+          
+          // Add installation time information if available
+          if (productDetails.installationTime) {
+            const engineeringTime = productDetails.installationTime.engineering || 0;
+            const productionTime = productDetails.installationTime.production || 0;
+            const commissioningTime = productDetails.installationTime.commissioning || 0;
+            const totalTime = engineeringTime + productionTime + commissioningTime;
+            
+            if (totalTime > 0) {
+              const timeRow = document.createElement('tr');
+              timeRow.className = 'installation-time-row';
+              timeRow.innerHTML = `
+                <td></td>
+                <td colspan="4" style="font-size:90%;color:#555;">
+                  <strong>Installation Time:</strong> 
+                  ${engineeringTime > 0 ? `Engineering: ${engineeringTime}h ` : ''}
+                  ${productionTime > 0 ? `Production: ${productionTime}h ` : ''}
+                  ${commissioningTime > 0 ? `Commissioning: ${commissioningTime}h ` : ''}
+                  (Total: ${totalTime}h)
+                </td>
+              `;
+              tableBody.appendChild(timeRow);
+            }
+          }
         }
       });
       
@@ -5213,14 +6377,27 @@ function generateProductPrintView(project) {
   // Handle uncategorized products
   const uncategorizedProducts = (project.products || []).filter(p => !p.categoryId);
   if (uncategorizedProducts.length > 0) {
-    // Calculate uncategorized total
+    // Calculate uncategorized total and hours
     let uncategorizedTotal = 0;
+    let uncategorizedEngineeringTime = 0;
+    let uncategorizedProductionTime = 0;
+    let uncategorizedCommissioningTime = 0;
+    
     uncategorizedProducts.forEach(product => {
       const productDetails = findProductById(product.productId);
       if (productDetails) {
         uncategorizedTotal += productDetails.price * product.quantity;
+        
+        // Add installation time (use product's own time values, even for bundles)
+        if (productDetails.installationTime) {
+          uncategorizedEngineeringTime += (productDetails.installationTime.engineering || 0) * product.quantity;
+          uncategorizedProductionTime += (productDetails.installationTime.production || 0) * product.quantity;
+          uncategorizedCommissioningTime += (productDetails.installationTime.commissioning || 0) * product.quantity;
+        }
       }
     });
+    
+    const uncategorizedTotalTime = uncategorizedEngineeringTime + uncategorizedProductionTime + uncategorizedCommissioningTime;
     
     // Create uncategorized section
     const uncategorizedSection = document.createElement('div');
@@ -5229,10 +6406,46 @@ function generateProductPrintView(project) {
     // Create category header
     const uncategorizedHeader = document.createElement('div');
     uncategorizedHeader.className = 'print-category-header';
-    uncategorizedHeader.innerHTML = `
-      <div class="print-category-name">Uncategorized Products</div>
-      <div class="print-category-total">${formatMoney(uncategorizedTotal)}</div>
-    `;
+    // Create header as a table to ensure consistent display in print
+    const headerTable = document.createElement('table');
+    headerTable.className = 'category-header-table';
+    headerTable.style.width = '100%';
+    headerTable.style.borderCollapse = 'collapse';
+    
+    const headerRow = headerTable.insertRow();
+    
+    // Category name cell
+    const nameCell = headerRow.insertCell();
+    nameCell.style.width = '40%';
+    nameCell.style.textAlign = 'left';
+    nameCell.style.fontWeight = 'bold';
+    nameCell.textContent = 'Uncategorized Products';
+    
+    // Hours cell
+    const hoursCell = headerRow.insertCell();
+    hoursCell.style.width = '40%';
+    hoursCell.style.textAlign = 'right';
+    
+    if (uncategorizedTotalTime > 0) {
+      hoursCell.innerHTML = `
+        <span style="font-weight:bold;">Hours:</span> 
+        E:${uncategorizedEngineeringTime} P:${uncategorizedProductionTime} C:${uncategorizedCommissioningTime} 
+        <span style="font-weight:bold;">(${uncategorizedTotalTime})</span>
+      `;
+    } else {
+      hoursCell.innerHTML = '&nbsp;';
+    }
+    
+    // Money cell
+    const moneyCell = headerRow.insertCell();
+    moneyCell.style.width = '20%';
+    moneyCell.style.textAlign = 'right';
+    moneyCell.style.fontWeight = 'bold';
+    moneyCell.textContent = formatMoney(uncategorizedTotal);
+    
+    // Clear existing content and append the table
+    uncategorizedHeader.innerHTML = '';
+    uncategorizedHeader.appendChild(headerTable);
     uncategorizedSection.appendChild(uncategorizedHeader);
     
     // Create products table
@@ -5270,6 +6483,30 @@ function generateProductPrintView(project) {
           <td>${formatPrice(totalPrice, productDetails.currency)}</td>
         `;
         tableBody.appendChild(row);
+        
+        // Add installation time information if available
+        if (productDetails.installationTime) {
+          const engineeringTime = productDetails.installationTime.engineering || 0;
+          const productionTime = productDetails.installationTime.production || 0;
+          const commissioningTime = productDetails.installationTime.commissioning || 0;
+          const totalTime = engineeringTime + productionTime + commissioningTime;
+          
+          if (totalTime > 0) {
+            const timeRow = document.createElement('tr');
+            timeRow.className = 'installation-time-row';
+            timeRow.innerHTML = `
+              <td></td>
+              <td colspan="4" style="font-size:90%;color:#555;">
+                <strong>Installation Time:</strong> 
+                ${engineeringTime > 0 ? `Engineering: ${engineeringTime}h ` : ''}
+                ${productionTime > 0 ? `Production: ${productionTime}h ` : ''}
+                ${commissioningTime > 0 ? `Commissioning: ${commissioningTime}h ` : ''}
+                (Total: ${totalTime}h)
+              </td>
+            `;
+            tableBody.appendChild(timeRow);
+          }
+        }
       }
     });
     
@@ -5381,18 +6618,54 @@ function getCurrentProject() {
 // Helper to get products from active project view
 function getActiveProjectProducts() {
   const products = [];
-  const productElements = document.querySelectorAll('.product-item');
-  productElements.forEach((el, index) => {
-    const productId = el.querySelector('.product-item-id')?.textContent;
-    const quantity = parseInt(el.querySelector('.product-item-quantity')?.textContent) || 1;
-    if (productId) {
-      products.push({
-        productId,
-        quantity,
-        categoryId: el.closest('.category-products')?.parentElement?.dataset?.categoryId
+  
+  // First get categorized products in order they appear in each category
+  const categoryContainers = document.querySelectorAll('.project-product-category');
+  categoryContainers.forEach(categoryContainer => {
+    const categoryId = categoryContainer.dataset.categoryId;
+    const categoryProductsEl = categoryContainer.querySelector('.category-products');
+    
+    if (categoryProductsEl) {
+      const productElements = categoryProductsEl.querySelectorAll('.product-item');
+      
+      productElements.forEach(el => {
+        const productId = el.querySelector('.product-item-id')?.textContent;
+        const quantity = parseInt(el.querySelector('.product-item-quantity')?.textContent) || 1;
+        const isOption = el.classList.contains('option');
+        
+        if (productId) {
+          products.push({
+            productId,
+            quantity,
+            categoryId,
+            isOption
+          });
+        }
       });
     }
   });
+  
+  // Then get uncategorized products
+  const uncategorizedContainer = document.querySelector('.uncategorized-products');
+  if (uncategorizedContainer) {
+    const productElements = uncategorizedContainer.querySelectorAll('.product-item');
+    
+    productElements.forEach(el => {
+      const productId = el.querySelector('.product-item-id')?.textContent;
+      const quantity = parseInt(el.querySelector('.product-item-quantity')?.textContent) || 1;
+      const isOption = el.classList.contains('option');
+      
+      if (productId) {
+        products.push({
+          productId,
+          quantity,
+          categoryId: null,
+          isOption
+        });
+      }
+    });
+  }
+  
   return products;
 }
 
@@ -5402,7 +6675,30 @@ function getActiveProjectCategories() {
   const categoryElements = document.querySelectorAll('.project-product-category');
   categoryElements.forEach((el, index) => {
     const categoryId = el.dataset.categoryId;
-    const categoryName = el.querySelector('.category-name')?.textContent;
+    
+    // Get the category name element and extract just the text, not including any child elements
+    const categoryNameElement = el.querySelector('.category-name');
+    
+    // Extract text properly
+    let categoryName = '';
+    if (categoryNameElement) {
+      // Simple text extraction skipping child elements 
+      const children = categoryNameElement.childNodes;
+      for (let i = 0; i < children.length; i++) {
+        if (children[i].nodeType === Node.TEXT_NODE) {
+          categoryName += children[i].textContent;
+        }
+      }
+    }
+    
+    // If we couldn't extract text or it's empty, try getting the full text content
+    if (!categoryName.trim()) {
+      categoryName = categoryNameElement?.textContent || '';
+    }
+    
+    // Clean up whitespace and newlines
+    categoryName = categoryName.replace(/\s+/g, ' ').trim();
+    
     if (categoryId && categoryName) {
       categories.push({
         id: categoryId,
@@ -5884,6 +7180,9 @@ function populateProductsTab(project) {
   
   // Setup drag and drop for categorization
   setupProductCategorization();
+  
+  // Setup drag and drop for product reordering within categories
+  setupProductDragDrop();
 }
 
 // Create a product element for the products list
@@ -5897,6 +7196,9 @@ function createProductElement(product, index, projectCurrency) {
     productItem.classList.add('option');
   }
   productItem.dataset.index = index;
+  
+  // Make the product item draggable for reordering
+  productItem.draggable = true;
   
   if (productDetails) {
     // Get the source currency of the product
@@ -6033,6 +7335,121 @@ function setupProductCategorization() {
   });
 }
 
+// Set up drag and drop for product reordering within categories
+function setupProductDragDrop() {
+  // Get all product items
+  const productItems = document.querySelectorAll('.product-item');
+  
+  productItems.forEach(item => {
+    // Setup drag start
+    item.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('product-index', item.dataset.index);
+      e.dataTransfer.setData('product-category', item.closest('.category-products')?.parentElement?.dataset?.categoryId || 'uncategorized');
+      // Add a class to style during dragging
+      item.classList.add('dragging');
+      
+      // Set a delay for visual feedback
+      setTimeout(() => {
+        item.style.opacity = '0.4';
+      }, 0);
+    });
+    
+    // Setup drag end
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      item.style.opacity = '1';
+    });
+    
+    // Setup drag over (to handle reordering within same category)
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const draggingItem = document.querySelector('.product-item.dragging');
+      
+      if (draggingItem && draggingItem !== item) {
+        const currentCategory = item.closest('.category-products');
+        const draggingCategory = draggingItem.closest('.category-products');
+        
+        // Only handle reordering if in the same category
+        if (currentCategory && draggingCategory && currentCategory === draggingCategory) {
+          const box = item.getBoundingClientRect();
+          const offset = e.clientY - box.top;
+          
+          if (offset < box.height / 2) {
+            // Insert before
+            currentCategory.insertBefore(draggingItem, item);
+          } else {
+            // Insert after
+            currentCategory.insertBefore(draggingItem, item.nextSibling);
+          }
+        }
+      }
+    });
+  });
+  
+  // Handle drop to update the model
+  document.addEventListener('dragend', () => {
+    updateProductOrdersInModel();
+  });
+}
+
+// Update the product orders in the model after drag and drop
+function updateProductOrdersInModel() {
+  const detailsModal = document.getElementById('project-details-modal');
+  if (!detailsModal) return;
+  
+  const projectId = detailsModal.dataset.projectId;
+  const project = projects.find(p => p.id === projectId);
+  
+  if (!project || !project.products) return;
+  
+  // Create a new array to hold the reordered products
+  const reorderedProducts = [];
+  
+  // First handle categorized products
+  const categoryContainers = document.querySelectorAll('.project-product-category');
+  categoryContainers.forEach(categoryContainer => {
+    const categoryId = categoryContainer.dataset.categoryId;
+    const categoryProductsEl = categoryContainer.querySelector('.category-products');
+    
+    if (categoryProductsEl) {
+      const productElements = categoryProductsEl.querySelectorAll('.product-item');
+      
+      productElements.forEach(productEl => {
+        const originalIndex = parseInt(productEl.dataset.index, 10);
+        if (!isNaN(originalIndex) && project.products[originalIndex]) {
+          const product = {...project.products[originalIndex]};
+          product.categoryId = categoryId; // Ensure category is set correctly
+          reorderedProducts.push(product);
+        }
+      });
+    }
+  });
+  
+  // Then handle uncategorized products
+  const uncategorizedContainer = document.querySelector('.uncategorized-products');
+  if (uncategorizedContainer) {
+    const productElements = uncategorizedContainer.querySelectorAll('.product-item');
+    
+    productElements.forEach(productEl => {
+      const originalIndex = parseInt(productEl.dataset.index, 10);
+      if (!isNaN(originalIndex) && project.products[originalIndex]) {
+        const product = {...project.products[originalIndex]};
+        product.categoryId = null; // Ensure product is uncategorized
+        reorderedProducts.push(product);
+      }
+    });
+  }
+  
+  // If we have all the products, update the project
+  if (reorderedProducts.length === project.products.length) {
+    project.products = reorderedProducts;
+    showNotification('Product order updated', 'success');
+  } else {
+    console.error('Product count mismatch during reordering');
+    showNotification('Error updating product order', 'error');
+  }
+}
+
 // Move a product to a category
 function moveProductToCategory(productIndex, categoryId, sourceCategory) {
   const detailsModal = document.getElementById('project-details-modal');
@@ -6043,8 +7460,55 @@ function moveProductToCategory(productIndex, categoryId, sourceCategory) {
   
   if (!project || !project.products) return;
   
-  // Update the product's category
-  project.products[productIndex].categoryId = categoryId;
+  // Get the product to move
+  const productToMove = project.products[productIndex];
+  if (!productToMove) return;
+  
+  // Clone the product with the new category ID
+  const updatedProduct = {
+    ...productToMove,
+    categoryId: categoryId
+  };
+  
+  // Remove the product from its original position
+  project.products.splice(productIndex, 1);
+  
+  // If there are products in the target category, add it to the end of that group
+  const targetCategoryProducts = project.products.filter(p => p.categoryId === categoryId);
+  
+  if (targetCategoryProducts.length > 0) {
+    // Find the index of the last product in this category
+    const lastIndex = project.products.findIndex(p => p.categoryId === categoryId);
+    let insertIndex = lastIndex;
+    
+    // Find the actual last index of the category (there may be multiple)
+    for (let i = lastIndex + 1; i < project.products.length; i++) {
+      if (project.products[i].categoryId === categoryId) {
+        insertIndex = i;
+      } else if (insertIndex !== lastIndex) {
+        // We found the end of the category group
+        break;
+      }
+    }
+    
+    // Insert after the last product in the category
+    project.products.splice(insertIndex + 1, 0, updatedProduct);
+  } else {
+    // If no products in target category, just append to the end
+    project.products.push(updatedProduct);
+  }
+  
+  // Get the category name for the notification
+  let categoryName = "uncategorized";
+  if (categoryId !== null) {
+    const targetCategory = project.productCategories.find(c => c.id === categoryId);
+    if (targetCategory && targetCategory.name) {
+      categoryName = targetCategory.name;
+    }
+  }
+  
+  // Show feedback
+  showNotification(`Product moved to ${categoryName}`, 'success');
   
   // Update the UI
   populateProductsTab(project);
@@ -6060,27 +7524,37 @@ function addNewCategory() {
   
   if (!project) return;
   
-  // Show a prompt for the category name
-  const categoryName = prompt('Enter a name for the new category:');
-  if (!categoryName) return;
-  
-  // Initialize categories array if needed
-  if (!project.productCategories) {
-    project.productCategories = [];
-  }
-  
-  // Add the new category
-  const newCategory = {
-    id: generateCategoryId(),
-    name: categoryName,
-    order: project.productCategories.length,
-    expanded: true
-  };
-  
-  project.productCategories.push(newCategory);
-  
-  // Update the UI
-  populateProductsTab(project);
+  // Show our custom input modal instead of prompt()
+  showInputModal(
+    'Add Category', 
+    'Enter a name for the new category:', 
+    '', 
+    (categoryName) => {
+      // If user cancelled or entered empty string, do nothing
+      if (!categoryName) return;
+      
+      // Initialize categories array if needed
+      if (!project.productCategories) {
+        project.productCategories = [];
+      }
+      
+      // Add the new category
+      const newCategory = {
+        id: generateCategoryId(),
+        name: categoryName,
+        order: project.productCategories.length,
+        expanded: true
+      };
+      
+      project.productCategories.push(newCategory);
+      
+      // Show success notification
+      showNotification(`Category "${categoryName}" added successfully`, 'success');
+      
+      // Update the UI
+      populateProductsTab(project);
+    }
+  );
 }
 
 // Remove a category from the project

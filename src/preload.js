@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld('electron', {
     }
   },
   receiveFromMain: (channel, func) => {
-    const validChannels = ['fromMain', 'dataResult', 'error', 'window-state-change', 'trigger-open-database', 'save-products-result'];
+    const validChannels = ['fromMain', 'dataResult', 'error', 'window-state-change', 'trigger-open-database', 'save-products-result', 'sync-database-path', 'sync-projects-database-path', 'selected-path'];
     if (validChannels.includes(channel)) {
       // Deliberately strip event as it includes `sender` 
       ipcRenderer.on(channel, (event, ...args) => func(...args));
@@ -26,14 +26,16 @@ contextBridge.exposeInMainWorld('electron', {
   
   // Database path operations
   database: {
-    selectPath: () => ipcRenderer.invoke('select-database-path'),
-    getPath: () => ipcRenderer.invoke('get-database-path'),
+    selectPath: (customPath, isProjectsPath) => ipcRenderer.invoke('select-database-path', customPath, isProjectsPath),
+    getPath: (isProjectsPath) => ipcRenderer.invoke('get-database-path', isProjectsPath),
     listFiles: (fileType) => ipcRenderer.invoke('list-database-files', fileType),
-    readFile: (fileName) => ipcRenderer.invoke('read-database-file', fileName),
-    saveFile: (fileName, data) => {
-      console.log('Invoking save-database-file with:', { fileName, data: typeof data });
-      return ipcRenderer.invoke('save-database-file', { fileName, data });
-    }
+    readFile: (fileName, customPath) => ipcRenderer.invoke('read-database-file', fileName, customPath),
+    saveFile: (fileName, data, customPath) => {
+      console.log('Invoking save-database-file with:', { fileName, data: typeof data, customPath });
+      return ipcRenderer.invoke('save-database-file', { fileName, data, customPath });
+    },
+    getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
+    resetAppSettings: () => ipcRenderer.invoke('reset-app-settings')
   },
   
   // Printing and system dialog API
